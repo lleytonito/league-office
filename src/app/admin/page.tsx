@@ -1,10 +1,14 @@
 import { AnnouncementForm } from "@/components/admin/announcement-form";
 import { ManageAnnouncementCard } from "@/components/admin/manage-announcement-card";
 import { MemberAccessForm } from "@/components/admin/member-access-form";
+import { MemberProfileAdminForm } from "@/components/admin/member-profile-admin-form";
 import { ReviewProposalCard } from "@/components/admin/review-proposal-card";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { AppHeader } from "@/components/layout/app-header";
+import { BadgePill } from "@/components/members/badge-pill";
+import { MemberIdentity } from "@/components/members/member-identity";
 import { ProposalFeedCard, type FeedProposal } from "@/components/proposals/proposal-feed-card";
+import { championBadge, type MemberBadge } from "@/lib/members/badges";
 import { canManageMember, getMemberStatusLabel } from "@/lib/members/status";
 import { createClient } from "@/lib/supabase/server";
 import { ArrowLeft, Crown, Megaphone, ShieldAlert } from "lucide-react";
@@ -20,6 +24,7 @@ type Member = {
 };
 
 type DirectoryMember = Member & {
+  badges: MemberBadge[] | null;
   created_at: string;
   updated_at: string;
 };
@@ -31,7 +36,10 @@ type ReviewProposal = {
   summary: string;
   title: string;
   author: {
+    avatar_color?: string | null;
+    badges?: MemberBadge[] | null;
     display_name: string;
+    id?: string;
     team_name: string | null;
   } | null;
   options: Array<{
@@ -54,7 +62,10 @@ type VoteRow = {
   proposal_id: string;
   voter_member_id: string;
   voter: {
+    avatar_color?: string | null;
+    badges?: MemberBadge[] | null;
     display_name: string;
+    id?: string;
     team_name: string | null;
   } | null;
 };
@@ -88,20 +99,20 @@ export default async function AdminPage() {
         supabase
           .from("proposals")
           .select(
-            "id, title, summary, rationale, created_at, author:league_members!proposals_author_member_id_fkey(display_name, team_name), options:proposal_vote_options(id, label, sort_order)",
+            "id, title, summary, rationale, created_at, author:league_members!proposals_author_member_id_fkey(id, display_name, team_name, avatar_color, badges:member_badges(quantity, badge:badge_definitions(slug, name, description, icon_key, color))), options:proposal_vote_options(id, label, sort_order)",
           )
           .eq("status", "review")
           .order("created_at", { ascending: true })
           .returns<ReviewProposal[]>(),
         supabase
           .from("league_members")
-          .select("id, display_name, team_name, is_member, is_admin, revoked_at, created_at, updated_at")
+          .select("id, display_name, team_name, is_member, is_admin, revoked_at, created_at, updated_at, badges:member_badges(quantity, badge:badge_definitions(slug, name, description, icon_key, color))")
           .order("created_at", { ascending: true })
           .returns<DirectoryMember[]>(),
         supabase
           .from("proposals")
           .select(
-            "id, title, summary, status, is_pinned, pinned_at, published_at, voting_closes_at, closed_at, passed, created_at, author:league_members!proposals_author_member_id_fkey(display_name, team_name), options:proposal_vote_options(id, label, sort_order), window:voting_windows!voting_windows_proposal_id_fkey(starts_at, ends_at, closed_at)",
+            "id, title, summary, status, is_pinned, pinned_at, published_at, voting_closes_at, closed_at, passed, created_at, author:league_members!proposals_author_member_id_fkey(id, display_name, team_name, avatar_color, badges:member_badges(quantity, badge:badge_definitions(slug, name, description, icon_key, color))), options:proposal_vote_options(id, label, sort_order), window:voting_windows!voting_windows_proposal_id_fkey(starts_at, ends_at, closed_at)",
           )
           .in("status", ["voting", "closed"])
           .order("published_at", { ascending: false })
@@ -110,7 +121,7 @@ export default async function AdminPage() {
         supabase
           .from("votes")
           .select(
-            "proposal_id, option_id, voter_member_id, voter:league_members!votes_voter_member_id_fkey(display_name, team_name)",
+            "proposal_id, option_id, voter_member_id, voter:league_members!votes_voter_member_id_fkey(id, display_name, team_name, avatar_color, badges:member_badges(quantity, badge:badge_definitions(slug, name, description, icon_key, color)))",
           )
           .returns<VoteRow[]>(),
       ])
@@ -272,11 +283,19 @@ function MemberDirectory({
               key={directoryMember.id}
             >
               <div className="min-w-0">
-                <h3 className="truncate text-sm font-semibold">{directoryMember.display_name}</h3>
-                <p className="mt-1 truncate text-xs text-[#626b59]">
-                  {directoryMember.team_name ?? "No team set"}
-                </p>
+                <MemberIdentity member={directoryMember} showBadge={false} />
+                {directoryMember.badges?.length ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {directoryMember.badges.map((badge) => (
+                      <BadgePill badge={badge} compact key={badge.badge?.slug ?? badge.quantity} />
+                    ))}
+                  </div>
+                ) : null}
               </div>
+              <MemberProfileAdminForm
+                championCount={championBadge(directoryMember.badges)?.quantity ?? 0}
+                member={directoryMember}
+              />
               <div className="flex items-center justify-between gap-3">
                 <span
                   className={`w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${

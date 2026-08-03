@@ -7,6 +7,7 @@ import {
   Shield,
   Trophy,
   UserRound,
+  UsersRound,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -60,6 +61,7 @@ export function AppHeader({
             </summary>
             <nav className="absolute right-0 mt-2 w-56 overflow-hidden rounded-lg border border-[#d9decf] bg-white shadow-xl shadow-[#1c2c1812]">
               <MenuLink href="/submit" icon={ClipboardList} label="Submit proposal" />
+              <MenuLink href="/members" icon={UsersRound} label="Members" />
               <MenuLink href="/analytics" icon={BarChart3} label="Analytics" />
               <MenuLink href="/profile" icon={UserRound} label="Profile" />
               {member?.is_admin ? <MenuLink href="/admin" icon={Shield} label="Admin" /> : null}

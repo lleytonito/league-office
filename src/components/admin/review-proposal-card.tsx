@@ -5,6 +5,7 @@ import {
   rejectProposalAction,
   type ProposalActionState,
 } from "@/app/actions/proposals";
+import { MemberIdentity, type IdentityMember } from "@/components/members/member-identity";
 import { ActionFeedback } from "@/components/proposals/action-feedback";
 import { Check, Plus, Trash2, X } from "lucide-react";
 import { useActionState, useMemo, useState } from "react";
@@ -16,7 +17,10 @@ type ReviewProposal = {
   summary: string;
   title: string;
   author: {
+    avatar_color?: string | null;
+    badges?: IdentityMember["badges"];
     display_name: string;
+    id?: string;
     team_name: string | null;
   } | null;
   options: Array<{
@@ -43,9 +47,9 @@ export function ReviewProposalCard({ proposal }: { proposal: ReviewProposal }) {
   return (
     <article className="rounded-lg border border-[#d9decf] bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-1">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#6a725f]">
-          Submitted by {proposal.author?.team_name ?? proposal.author?.display_name ?? "Member"}
-        </p>
+        <div className="text-sm text-[#6a725f]">
+          Submitted by <MemberIdentity member={proposal.author ?? null} showBadge={false} size="sm" />
+        </div>
         <p className="text-xs text-[#777f6c]">{formatDate(proposal.created_at)}</p>
       </div>
 

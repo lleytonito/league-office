@@ -1,5 +1,6 @@
 import { AppHeader } from "@/components/layout/app-header";
 import { ProposalFeedCard, type FeedProposal } from "@/components/proposals/proposal-feed-card";
+import { type MemberBadge } from "@/lib/members/badges";
 import { createClient } from "@/lib/supabase/server";
 import { Megaphone, Plus } from "lucide-react";
 import Link from "next/link";
@@ -28,10 +29,19 @@ type VoteRow = {
   proposal_id: string;
   voter_member_id: string;
   voter: {
+    avatar_color?: string | null;
+    badges?: MemberBadge[] | null;
     display_name: string;
+    id?: string;
     team_name: string | null;
   } | null;
 };
+
+const signedInProposalSelect =
+  "id, title, summary, status, is_pinned, pinned_at, published_at, voting_closes_at, closed_at, passed, created_at, author:league_members!proposals_author_member_id_fkey(id, display_name, team_name, avatar_color, badges:member_badges(quantity, badge:badge_definitions(slug, name, description, icon_key, color))), options:proposal_vote_options(id, label, sort_order), window:voting_windows!voting_windows_proposal_id_fkey(starts_at, ends_at, closed_at)";
+
+const publicProposalSelect =
+  "id, title, summary, status, is_pinned, pinned_at, published_at, voting_closes_at, closed_at, passed, created_at, options:proposal_vote_options(id, label, sort_order), window:voting_windows!voting_windows_proposal_id_fkey(starts_at, ends_at, closed_at)";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -62,21 +72,19 @@ export default async function Home() {
       .returns<FeedAnnouncement[]>(),
     supabase
       .from("proposals")
-      .select(
-        "id, title, summary, status, is_pinned, pinned_at, published_at, voting_closes_at, closed_at, passed, created_at, author:league_members!proposals_author_member_id_fkey(display_name, team_name), options:proposal_vote_options(id, label, sort_order), window:voting_windows!voting_windows_proposal_id_fkey(starts_at, ends_at, closed_at)",
-      )
+      .select(member ? signedInProposalSelect : publicProposalSelect)
       .in("status", ["approved", "voting", "closed", "published"])
       .not("published_at", "is", null)
       .order("is_pinned", { ascending: false })
       .order("pinned_at", { ascending: false, nullsFirst: false })
       .order("published_at", { ascending: false })
       .limit(20)
-      .returns<FeedProposal[]>(),
+      .returns<Array<FeedProposal | (Omit<FeedProposal, "author"> & { author?: null })>>(),
     member
       ? supabase
           .from("votes")
           .select(
-            "proposal_id, option_id, voter_member_id, voter:league_members!votes_voter_member_id_fkey(display_name, team_name)",
+            "proposal_id, option_id, voter_member_id, voter:league_members!votes_voter_member_id_fkey(id, display_name, team_name, avatar_color, badges:member_badges(quantity, badge:badge_definitions(slug, name, description, icon_key, color)))",
           )
           .returns<VoteRow[]>()
       : Promise.resolve({ data: [] as VoteRow[] }),
@@ -85,6 +93,7 @@ export default async function Home() {
   const announcements = announcementsResult.data ?? [];
   const proposals = (proposalsResult.data ?? []).map((proposal) => ({
     ...proposal,
+    author: proposal.author ?? null,
     options: [...proposal.options].sort((a, b) => a.sort_order - b.sort_order),
   }));
   const votes = votesResult.data ?? [];

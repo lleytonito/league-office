@@ -5,6 +5,9 @@ import {
   closeVotingAction,
   toggleProposalPinAction,
 } from "@/app/actions/proposals";
+import { MemberAvatar } from "@/components/members/member-avatar";
+import { MemberIdentity, type IdentityMember } from "@/components/members/member-identity";
+import { memberDisplayName } from "@/lib/members/display";
 import {
   BarChart3,
   CheckCircle2,
@@ -30,7 +33,10 @@ export type FeedProposal = {
   title: string;
   voting_closes_at: string | null;
   author: {
+    avatar_color?: string | null;
+    badges?: IdentityMember["badges"];
     display_name: string;
+    id?: string;
     team_name: string | null;
   } | null;
   options: Array<{
@@ -50,7 +56,10 @@ type VoteRow = {
   proposal_id: string;
   voter_member_id: string;
   voter: {
+    avatar_color?: string | null;
+    badges?: IdentityMember["badges"];
     display_name: string;
+    id?: string;
     team_name: string | null;
   } | null;
 };
@@ -122,9 +131,6 @@ export function ProposalFeedCard({
               <h2 className="mt-3 text-xl font-semibold leading-tight text-[#111411] transition group-hover:text-[#315235]">
                 {proposal.title}
               </h2>
-              <p className="mt-1 text-sm text-[#6a725f]">
-                {proposal.author?.team_name ?? proposal.author?.display_name ?? "League member"}
-              </p>
               <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#718063] sm:hidden">
                 {isExpanded ? "Tap to collapse" : "Tap for details"}
                 <ChevronDown
@@ -149,6 +155,9 @@ export function ProposalFeedCard({
             </button>
           </form>
         ) : null}
+      </div>
+      <div className="mt-1">
+        <MemberIdentity member={proposal.author ?? null} showBadge={false} size="sm" />
       </div>
 
       <div
@@ -259,13 +268,13 @@ export function ProposalFeedCard({
             <div className="mt-3 grid gap-2">
               {proposalVotes.map((vote) => (
                 <div className="flex items-center gap-3 text-sm" key={vote.voter_member_id}>
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#edf4e6] text-xs font-bold text-[#315235]">
-                    {initials(vote.voter?.team_name ?? vote.voter?.display_name ?? "LM")}
-                  </div>
+                  <MemberAvatar
+                    color={vote.voter?.avatar_color ?? null}
+                    name={vote.voter ? memberDisplayName(vote.voter) : "League member"}
+                    size="sm"
+                  />
                   <p className="min-w-0 text-[#626b59]">
-                    <span className="font-semibold text-[#293421]">
-                      {vote.voter?.team_name ?? vote.voter?.display_name ?? "League member"}
-                    </span>{" "}
+                    <MemberIdentity member={vote.voter ?? null} showBadge={false} size="sm" />{" "}
                     voted for{" "}
                     <span className="font-semibold text-[#293421]">
                       {proposal.options.find((option) => option.id === vote.option_id)?.label ?? "an option"}
@@ -293,16 +302,6 @@ export function ProposalFeedCard({
       </div>
     </article>
   );
-}
-
-function initials(value: string) {
-  return value
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
 }
 
 function formatShortDate(value: string | null | undefined) {
