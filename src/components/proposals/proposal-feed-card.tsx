@@ -137,14 +137,6 @@ export function ProposalFeedCard({
               <h2 className="mt-3 text-xl font-semibold leading-tight text-[#111411] transition group-hover:text-[#315235]">
                 {proposal.title}
               </h2>
-              <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#718063] sm:hidden">
-                {isExpanded ? "Tap to collapse" : "Tap for details"}
-                <ChevronDown
-                  className={`transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`}
-                  size={15}
-                  aria-hidden="true"
-                />
-              </p>
             </div>
           </div>
         </button>
@@ -165,6 +157,20 @@ export function ProposalFeedCard({
       <div className="mt-1">
         <MemberIdentity member={proposal.author ?? null} showBadge={false} size="sm" />
       </div>
+      <button
+        aria-controls={detailsId}
+        aria-expanded={isExpanded}
+        className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#718063] outline-none transition hover:text-[#315235] focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-[#9eb58d] sm:hidden"
+        onClick={() => setIsExpanded((current) => !current)}
+        type="button"
+      >
+        {isExpanded ? "Tap to collapse" : "Tap for details"}
+        <ChevronDown
+          className={`transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`}
+          size={15}
+          aria-hidden="true"
+        />
+      </button>
 
       <div
         className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ease-out motion-reduce:transition-none ${
