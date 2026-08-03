@@ -1,31 +1,9 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
-import { CircleUserRound, Loader2, Trophy } from "lucide-react";
-import { useState } from "react";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { Trophy } from "lucide-react";
 
 export function LoginWall() {
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  async function signInWithGoogle() {
-    setError(null);
-    setIsLoading(true);
-
-    const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-
-    if (signInError) {
-      setError(signInError.message);
-      setIsLoading(false);
-    }
-  }
-
   return (
     <main className="min-h-dvh bg-[#f7f8f4] text-[#151712]">
       <section className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col justify-between px-5 py-6 sm:px-8">
@@ -59,25 +37,7 @@ export function LoginWall() {
               in.
             </p>
 
-            <button
-              type="button"
-              onClick={signInWithGoogle}
-              disabled={isLoading}
-              className="mt-6 flex h-12 w-full items-center justify-center gap-3 rounded-md bg-[#182214] px-4 text-sm font-semibold text-white transition hover:bg-[#26351f] disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {isLoading ? (
-                <Loader2 className="animate-spin" size={18} aria-hidden="true" />
-              ) : (
-                <CircleUserRound size={18} aria-hidden="true" />
-              )}
-              Continue with Google
-            </button>
-
-            {error ? (
-              <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {error}
-              </p>
-            ) : null}
+            <GoogleSignInButton className="mt-6 flex h-12 w-full items-center justify-center gap-3 rounded-md bg-[#182214] px-4 text-sm font-semibold text-white transition hover:bg-[#26351f] disabled:cursor-not-allowed disabled:opacity-70" />
           </div>
         </div>
       </section>
