@@ -43,15 +43,20 @@ The current remote schema is captured in:
 supabase/migrations/20260803063000_initial_league_office_schema.sql
 ```
 
-The Supabase CLI scaffold is present in `supabase/config.toml`, but the local CLI still needs a Supabase access token before `supabase link` and `supabase db pull` can run.
+The Supabase CLI scaffold is present in `supabase/config.toml` and linked to the remote project. Linked SQL queries and advisors work without Docker:
 
 ```bash
-npx supabase login
-npx supabase link --project-ref lqduwieteamxlbnsjyxb
+npx supabase db query --linked "select count(*) from public.league_members;"
+npx supabase db advisors --linked
+```
+
+Docker Desktop is still required for CLI schema diff/dump workflows:
+
+```bash
 npx supabase db pull verify_remote_schema --linked --schema public,app_private
 ```
 
-Use the pulled diff as a verification artifact before changing the remote schema.
+The committed migration was created from catalog inspection through the authenticated Supabase connector. Use `db pull` as a verification artifact once Docker Desktop is available.
 
 ## Verification
 
