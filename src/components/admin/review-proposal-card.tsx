@@ -67,15 +67,6 @@ export function ReviewProposalCard({ proposal }: { proposal: ReviewProposal }) {
           name="summary"
           required
         />
-        <textarea
-          className="min-h-20 rounded-md border border-[#d9decf] bg-white px-3 py-3 text-sm leading-6 outline-none transition focus:border-[#587246] focus:ring-2 focus:ring-[#d9e5c9]"
-          defaultValue={proposal.rationale ?? ""}
-          disabled={pending}
-          maxLength={4000}
-          name="rationale"
-          placeholder="Admin notes or rationale"
-        />
-
         <div className="grid gap-2">
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm font-semibold text-[#293421]">Vote options</span>

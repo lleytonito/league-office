@@ -2,7 +2,7 @@
 
 :root {
   --background: #f7f8f4;
-  --foreground: #171717;
+  --foreground: #111411;
 }
 
 @theme inline {
@@ -16,4 +16,20 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+}
+
+html {
+  overflow-x: hidden;
+}
+
+button,
+input,
+textarea,
+summary {
+  font: inherit;
+}
+
+::selection {
+  background: #d8e5c9;
 }

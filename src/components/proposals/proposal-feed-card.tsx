@@ -44,12 +44,14 @@ export function ProposalFeedCard({
   isMemberActive,
   memberId,
   proposal,
+  showAdminControls = false,
   votes,
 }: {
   isAdmin: boolean;
   isMemberActive: boolean;
   memberId: string | null;
   proposal: FeedProposal;
+  showAdminControls?: boolean;
   votes: VoteRow[];
 }) {
   const proposalVotes = votes.filter((vote) => vote.proposal_id === proposal.id);
@@ -72,7 +74,8 @@ export function ProposalFeedCard({
   }));
 
   return (
-    <article className="rounded-lg border border-[#d9decf] bg-white p-4 shadow-sm sm:p-5">
+    <article className="overflow-hidden rounded-[10px] border border-[#d9decf] bg-white shadow-sm">
+      <div className="border-l-4 border-[#587246] p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -93,7 +96,7 @@ export function ProposalFeedCard({
             {proposal.author?.team_name ?? proposal.author?.display_name ?? "League member"}
           </p>
         </div>
-        {isAdmin ? (
+        {showAdminControls && isAdmin ? (
           <form action={toggleProposalPinAction}>
             <input name="proposalId" type="hidden" value={proposal.id} />
             <input name="shouldPin" type="hidden" value={proposal.is_pinned ? "false" : "true"} />
@@ -111,11 +114,11 @@ export function ProposalFeedCard({
       <p className="mt-4 text-base leading-7 text-[#374032]">{proposal.summary}</p>
 
       <div className="mt-4 flex flex-wrap gap-2 text-sm text-[#596153]">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fbfcf8] px-3 py-1.5">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f4f8ef] px-3 py-1.5">
           <Vote size={15} aria-hidden="true" />
           {totalVotes} votes cast
         </span>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fbfcf8] px-3 py-1.5">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f4f0e7] px-3 py-1.5 text-[#6c5136]">
           <Clock size={15} aria-hidden="true" />
           {proposal.status === "closed"
             ? "Closed"
@@ -131,8 +134,8 @@ export function ProposalFeedCard({
           if (canSeeResults) {
             return (
               <div
-                className={`overflow-hidden rounded-lg border ${
-                  selected ? "border-[#587246] bg-[#f4f8ef]" : "border-[#e1e5d9] bg-[#fbfcf8]"
+                className={`overflow-hidden rounded-[10px] border ${
+                  selected ? "border-[#587246] bg-[#f4f8ef]" : "border-[#e1e5d9] bg-white"
                 }`}
                 key={option.id}
               >
@@ -156,7 +159,7 @@ export function ProposalFeedCard({
               <input name="proposalId" type="hidden" value={proposal.id} />
               <input name="optionId" type="hidden" value={option.id} />
               <button
-                className="flex min-h-12 w-full items-center justify-between gap-3 rounded-lg border border-[#d9decf] bg-[#fbfcf8] px-3 py-2.5 text-left text-sm font-semibold text-[#293421] transition hover:border-[#587246] hover:bg-[#f4f8ef] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex min-h-12 w-full items-center justify-between gap-3 rounded-[10px] border border-[#d9decf] bg-white px-3 py-2.5 text-left text-sm font-semibold text-[#293421] transition hover:border-[#587246] hover:bg-[#f4f8ef] disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={!canVote}
                 type="submit"
               >
@@ -188,7 +191,7 @@ export function ProposalFeedCard({
         </p>
       ) : null}
 
-      {isAdmin && proposal.status === "voting" ? (
+      {showAdminControls && isAdmin && proposal.status === "voting" ? (
         <form action={closeVotingAction} className="mt-4">
           <input name="proposalId" type="hidden" value={proposal.id} />
           <button
@@ -199,6 +202,7 @@ export function ProposalFeedCard({
           </button>
         </form>
       ) : null}
+      </div>
     </article>
   );
 }

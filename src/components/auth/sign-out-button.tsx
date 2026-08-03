@@ -5,7 +5,13 @@ import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function SignOutButton() {
+export function SignOutButton({
+  className = "flex size-10 items-center justify-center rounded-md border border-[#d9decf] bg-white text-[#3e4a36] transition hover:bg-[#eef2e8] disabled:opacity-70",
+  label,
+}: {
+  className?: string;
+  label?: string;
+}) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -21,11 +27,12 @@ export function SignOutButton() {
       type="button"
       onClick={signOut}
       disabled={isLoading}
-      className="flex size-10 items-center justify-center rounded-md border border-[#d9decf] bg-white text-[#3e4a36] transition hover:bg-[#eef2e8] disabled:opacity-70"
+      className={className}
       aria-label="Sign out"
       title="Sign out"
     >
       <LogOut size={18} aria-hidden="true" />
+      {label}
     </button>
   );
 }

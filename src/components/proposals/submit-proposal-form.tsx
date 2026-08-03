@@ -44,20 +44,6 @@ export function SubmitProposalForm({ disabled }: { disabled: boolean }) {
       </div>
 
       <div className="grid gap-2">
-        <label className="text-sm font-semibold text-[#293421]" htmlFor="proposal-rationale">
-          Why it matters
-        </label>
-        <textarea
-          className="min-h-24 rounded-md border border-[#d9decf] bg-white px-3 py-3 text-base leading-6 outline-none transition focus:border-[#587246] focus:ring-2 focus:ring-[#d9e5c9]"
-          disabled={disabled || pending}
-          id="proposal-rationale"
-          maxLength={4000}
-          name="rationale"
-          placeholder="Optional context for the commissioner and league."
-        />
-      </div>
-
-      <div className="grid gap-2">
         <div className="flex items-center justify-between gap-3">
           <label className="text-sm font-semibold text-[#293421]">Vote options</label>
           <button
