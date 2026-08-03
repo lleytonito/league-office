@@ -35,9 +35,7 @@ export default async function AnalyticsPage() {
         <div className="rounded-[10px] border border-[#d9decf] bg-white p-6 shadow-sm">
           <BarChart3 className="text-[#587246]" size={24} aria-hidden="true" />
           <h1 className="mt-4 text-2xl font-semibold">Analytics</h1>
-          <p className="mt-2 text-sm leading-6 text-[#626b59]">
-            Coming soon. This will become the league pulse view after voting is fully tested.
-          </p>
+          <p className="mt-2 text-sm leading-6 text-[#626b59]">Coming soon!</p>
         </div>
       </section>
     </main>

@@ -163,31 +163,6 @@ export const scoringGroups: ScoringGroup[] = [
   },
 ];
 
-export const divisions = [
-  {
-    title: "East",
-    teams: [
-      "Blue Balls",
-      "the REAL Lleyton Ito",
-      "kraft yac and cheese",
-      "Super Molar",
-      "Nabers In Paris",
-      "Psych Ward",
-    ],
-  },
-  {
-    title: "West",
-    teams: [
-      "Kirkumcised Penix",
-      "TE U",
-      "I Love Harri Willis",
-      "Bronco Chase",
-      "Purdy Little Flowers",
-      "Jaylen Warren Peace",
-    ],
-  },
-];
-
 export const leagueRuleSections: Array<{ items: RuleItem[]; title: string }> = [
   {
     title: "Player Rules",

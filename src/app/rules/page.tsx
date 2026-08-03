@@ -1,7 +1,6 @@
 import { AppHeader } from "@/components/layout/app-header";
 import {
   basicSettings,
-  divisions,
   draftSettings,
   leagueRuleSections,
   rosterRules,
@@ -55,8 +54,7 @@ export default async function RulesPage() {
             <div>
               <h1 className="text-3xl font-semibold leading-tight">Last Year&apos;s Rules</h1>
               <p className="mt-2 text-sm leading-6 text-[#626b59]">
-                Static ESPN League Manager settings from last season, collected here so members can
-                compare proposals against the current baseline.
+                ESPN League Manager settings from last season.
               </p>
             </div>
           </div>
@@ -122,24 +120,6 @@ export default async function RulesPage() {
                 </summary>
                 <RuleList items={group.items} />
               </details>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm">
-          <h2 className="text-2xl font-semibold">Teams and Divisions</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {divisions.map((division) => (
-              <div className="rounded-[10px] border border-[#e1e5d9] bg-[#fbfcf8] p-4" key={division.title}>
-                <h3 className="text-base font-semibold text-[#293421]">{division.title}</h3>
-                <ul className="mt-3 grid gap-2 text-sm text-[#4e5a45]">
-                  {division.teams.map((team) => (
-                    <li className="rounded-md bg-white px-3 py-2" key={team}>
-                      {team}
-                    </li>
-                  ))}
-                </ul>
-              </div>
             ))}
           </div>
         </section>

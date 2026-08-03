@@ -5,7 +5,7 @@ export function HomeActionPanel() {
   return (
     <section className="rounded-[10px] border border-[#d9decf] bg-white p-4 shadow-sm">
       <p className="text-sm leading-6 text-[#4e5a45]">
-        Submit rule ideas for commissioner review. Approved proposals appear on the feed for league
+        Submit rule ideas for commissioner review! Approved proposals appear on the feed for league
         voting, and results unlock after you vote.
       </p>
       <div className="mt-4 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">

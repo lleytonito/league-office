@@ -9,6 +9,7 @@ import {
 import { MemberAvatar } from "@/components/members/member-avatar";
 import { MemberIdentity, type IdentityMember } from "@/components/members/member-identity";
 import { memberDisplayName } from "@/lib/members/display";
+import { closedResultText } from "@/lib/proposals/results";
 import {
   BarChart3,
   CheckCircle2,
@@ -106,6 +107,7 @@ export function ProposalFeedCard({
     ...option,
     count: proposalVotes.filter((vote) => vote.option_id === option.id).length,
   }));
+  const resultText = closedResultText(counts, proposal.passed, totalVotes);
   const detailsId = `proposal-details-${proposal.id}`;
 
   return (
@@ -251,7 +253,7 @@ export function ProposalFeedCard({
       ) : proposal.status === "closed" ? (
         <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-[#293421]">
           <CheckCircle2 size={16} aria-hidden="true" />
-          {proposal.passed ? "Passed by simple majority" : "Failed by simple majority"}
+          {resultText}
         </p>
       ) : null}
 
