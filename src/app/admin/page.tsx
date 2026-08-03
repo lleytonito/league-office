@@ -1,4 +1,5 @@
 import { AnnouncementForm } from "@/components/admin/announcement-form";
+import { EspnAnalyticsAdmin } from "@/components/admin/espn-analytics-admin";
 import { HomeActionsSettingsForm } from "@/components/admin/home-actions-settings-form";
 import { ManageAnnouncementCard } from "@/components/admin/manage-announcement-card";
 import { MemberAccessForm } from "@/components/admin/member-access-form";
@@ -84,6 +85,23 @@ type HomeActionsSetting = {
   } | null;
 };
 
+type EspnTeamRow = {
+  espn_member_id: string | null;
+  season: number;
+  team_name: string;
+};
+
+type MemberTeamLinkRow = {
+  espn_member_id: string;
+  member_id: string;
+};
+
+type ChampionshipDetectionRow = {
+  member_id: string | null;
+  season: number;
+  team_name: string;
+};
+
 export default async function AdminPage() {
   const supabase = await createClient();
   const {
@@ -109,6 +127,9 @@ export default async function AdminPage() {
     votesResult,
     homeActionsResult,
     espnProbe,
+    espnTeamsResult,
+    teamLinksResult,
+    championshipDetectionsResult,
   ] = isAdmin
     ? await Promise.all([
         supabase
@@ -152,6 +173,21 @@ export default async function AdminPage() {
           .eq("key", "home_actions")
           .maybeSingle<HomeActionsSetting>(),
         probeEspnLeague(),
+        supabase
+          .from("espn_teams")
+          .select("season, espn_member_id, team_name")
+          .not("espn_member_id", "is", null)
+          .order("season", { ascending: false })
+          .returns<EspnTeamRow[]>(),
+        supabase
+          .from("member_team_links")
+          .select("member_id, espn_member_id")
+          .returns<MemberTeamLinkRow[]>(),
+        supabase
+          .from("championship_detections")
+          .select("season, team_name, member_id")
+          .order("season", { ascending: false })
+          .returns<ChampionshipDetectionRow[]>(),
       ])
     : [
         { data: [] as ManagedAnnouncement[] },
@@ -161,6 +197,9 @@ export default async function AdminPage() {
         { data: [] as VoteRow[] },
         { data: null as HomeActionsSetting | null },
         null as EspnProbeResult | null,
+        { data: [] as EspnTeamRow[] },
+        { data: [] as MemberTeamLinkRow[] },
+        { data: [] as ChampionshipDetectionRow[] },
       ];
 
   const memberIds = uniqueStrings([
@@ -206,7 +245,11 @@ export default async function AdminPage() {
     activeResult.error,
     votesResult.error,
     homeActionsResult.error,
+    "error" in espnTeamsResult ? espnTeamsResult.error : null,
+    "error" in teamLinksResult ? teamLinksResult.error : null,
+    "error" in championshipDetectionsResult ? championshipDetectionsResult.error : null,
   ].flatMap((error) => (error ? [error.message] : []));
+  const espnOwners = buildEspnOwnerOptions(espnTeamsResult.data ?? []);
 
   return (
     <main className="min-h-dvh bg-[#f7f8f4] text-[#111411]">
@@ -252,6 +295,17 @@ export default async function AdminPage() {
             ) : null}
 
             <SystemSafetyPanel espnProbe={espnProbe} systemInfo={systemInfo} />
+
+            <EspnAnalyticsAdmin
+              championshipDetections={championshipDetectionsResult.data ?? []}
+              espnOwners={espnOwners}
+              links={teamLinksResult.data ?? []}
+              members={members.map((directoryMember) => ({
+                display_name: directoryMember.display_name,
+                id: directoryMember.id,
+                team_name: directoryMember.team_name,
+              }))}
+            />
 
             <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm">
               <div className="flex items-center gap-3">
@@ -477,6 +531,24 @@ function SystemSafetyPanel({
 
 function uniqueStrings(values: Array<string | null | undefined>) {
   return [...new Set(values.filter((value): value is string => Boolean(value)))];
+}
+
+function buildEspnOwnerOptions(rows: EspnTeamRow[]) {
+  const byMember = new Map<string, { espnMemberId: string; label: string; latestSeason: number }>();
+
+  for (const row of rows) {
+    if (!row.espn_member_id || byMember.has(row.espn_member_id)) {
+      continue;
+    }
+
+    byMember.set(row.espn_member_id, {
+      espnMemberId: row.espn_member_id,
+      label: row.team_name,
+      latestSeason: row.season,
+    });
+  }
+
+  return [...byMember.values()].sort((a, b) => a.label.localeCompare(b.label));
 }
 
 function GateCard({ children, title }: { children: React.ReactNode; title: string }) {

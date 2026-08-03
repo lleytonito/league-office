@@ -12,6 +12,57 @@ const DEFAULT_VIEWS = [
   "mDraftDetail",
 ] as const;
 
+export type EspnTeam = {
+  abbrev?: string;
+  id: number;
+  logo?: string;
+  name?: string;
+  owners?: string[];
+  playoffSeed?: number;
+  points?: number;
+  primaryOwner?: string;
+  rankCalculatedFinal?: number;
+  rankFinal?: number;
+};
+
+export type EspnMatchupTeam = {
+  teamId?: number;
+  totalPoints?: number;
+};
+
+export type EspnMatchup = {
+  away?: EspnMatchupTeam;
+  home?: EspnMatchupTeam;
+  id?: number;
+  matchupPeriodId?: number;
+  playoffTierType?: string;
+  winner?: string;
+};
+
+export type EspnLeagueSeasonData = {
+  draftDetail?: {
+    picks?: unknown[];
+  };
+  id?: number;
+  members?: Array<{
+    displayName?: string;
+    firstName?: string;
+    id?: string;
+    lastName?: string;
+  }>;
+  schedule?: EspnMatchup[];
+  seasonId?: number;
+  settings?: {
+    name?: string;
+  };
+  status?: {
+    currentMatchupPeriod?: number;
+    finalScoringPeriod?: number;
+    previousSeasons?: number[];
+  };
+  teams?: EspnTeam[];
+};
+
 export type EspnProbeSeasonResult = {
   availableTopLevelKeys: string[];
   draftPickCount: number | null;
@@ -94,6 +145,27 @@ export async function probeEspnLeague(seasons = getDefaultProbeSeasons()): Promi
   };
 }
 
+export async function fetchEspnSeason(season: number): Promise<EspnLeagueSeasonData> {
+  const env = getEspnEnv();
+
+  if (!env.configured || !env.leagueId || !env.swid || !env.espnS2) {
+    throw new Error(`Missing ESPN environment variables: ${env.missing.join(", ")}`);
+  }
+
+  return fetchEspnSeasonWithEnv({
+    espnS2: env.espnS2,
+    leagueId: env.leagueId,
+    season,
+    swid: env.swid,
+  });
+}
+
+export async function fetchEspnAvailableSeasons() {
+  const currentSeason = await fetchEspnSeason(new Date().getFullYear());
+  const previousSeasons = currentSeason.status?.previousSeasons ?? [];
+  return [...new Set([...previousSeasons, new Date().getFullYear()])].sort((a, b) => a - b);
+}
+
 function getDefaultProbeSeasons() {
   const currentYear = new Date().getFullYear();
   return [currentYear, currentYear - 1, currentYear - 2];
@@ -151,6 +223,66 @@ async function fetchSeasonSummary({
       status: null,
     });
   }
+}
+
+async function fetchEspnSeasonWithEnv({
+  espnS2,
+  leagueId,
+  season,
+  swid,
+}: {
+  espnS2: string;
+  leagueId: string;
+  season: number;
+  swid: string;
+}) {
+  const url = buildSeasonUrl({ leagueId, season, views: DEFAULT_VIEWS });
+  const response = await fetch(url, {
+    cache: "no-store",
+    headers: {
+      Cookie: `SWID=${swid}; espn_s2=${espnS2}`,
+      "User-Agent": "League Office commissioner analytics import",
+    },
+  });
+
+  if (response.ok) {
+    return (await response.json()) as EspnLeagueSeasonData;
+  }
+
+  if (season <= 2017) {
+    return fetchEspnLegacySeasonWithEnv({ espnS2, leagueId, season, swid });
+  }
+
+  throw new Error(`ESPN returned ${response.status} ${response.statusText || "error"} for ${season}.`);
+}
+
+async function fetchEspnLegacySeasonWithEnv({
+  espnS2,
+  leagueId,
+  season,
+  swid,
+}: {
+  espnS2: string;
+  leagueId: string;
+  season: number;
+  swid: string;
+}) {
+  const params = new URLSearchParams({ seasonId: String(season) });
+  DEFAULT_VIEWS.forEach((view) => params.append("view", view));
+  const response = await fetch(`${ESPN_BASE_URL}/leagueHistory/${leagueId}?${params.toString()}`, {
+    cache: "no-store",
+    headers: {
+      Cookie: `SWID=${swid}; espn_s2=${espnS2}`,
+      "User-Agent": "League Office commissioner analytics import",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`ESPN returned ${response.status} ${response.statusText || "error"} for ${season}.`);
+  }
+
+  const data = (await response.json()) as EspnLeagueSeasonData | EspnLeagueSeasonData[];
+  return Array.isArray(data) ? data[0] : data;
 }
 
 function buildSeasonUrl({

@@ -1,15 +1,7 @@
-import { BadgePill } from "@/components/members/badge-pill";
-import { MemberAvatar } from "@/components/members/member-avatar";
 import { LoginWall } from "@/components/auth/login-wall";
 import { AppHeader } from "@/components/layout/app-header";
-import {
-  attachBadgesToMembers,
-  type MemberBadge,
-  type MemberBadgeAward,
-} from "@/lib/members/badges";
-import { memberDisplayName, memberSubtitle } from "@/lib/members/display";
 import { createClient } from "@/lib/supabase/server";
-import { ArrowLeft, ChevronRight, UsersRound } from "lucide-react";
+import { ArrowLeft, ChevronRight, Link2, ShieldCheck, UsersRound } from "lucide-react";
 import Link from "next/link";
 
 type HeaderMember = {
@@ -20,13 +12,22 @@ type HeaderMember = {
   team_name: string | null;
 };
 
-type DirectoryMember = HeaderMember & {
-  avatar_color: string | null;
-  badges: MemberBadge[] | null;
-  id: string;
-  profile_bio: string | null;
+type EspnTeamRow = {
+  espn_member_id: string | null;
+  espn_team_id: number;
+  logo_url: string | null;
+  season: number;
+  team_name: string;
 };
-type BaseDirectoryMember = Omit<DirectoryMember, "badges">;
+
+type TeamLinkRow = {
+  espn_member_id: string;
+  member: {
+    display_name: string;
+    id: string;
+    team_name: string | null;
+  } | null;
+};
 
 export default async function MembersPage() {
   const supabase = await createClient();
@@ -38,30 +39,27 @@ export default async function MembersPage() {
     return <LoginWall />;
   }
 
-  const [{ data: currentMember }, { data: baseMembers, error: membersError }] = await Promise.all([
-    supabase
-      .from("league_members")
-      .select("display_name, team_name, is_member, is_admin, revoked_at")
-      .eq("auth_user_id", user.id)
-      .maybeSingle<HeaderMember>(),
-    supabase
-      .from("league_members")
-      .select("id, display_name, team_name, profile_bio, avatar_color, is_member, is_admin, revoked_at")
-      .eq("is_member", true)
-      .is("revoked_at", null)
-      .order("team_name", { ascending: true, nullsFirst: false })
-      .order("display_name", { ascending: true })
-      .returns<BaseDirectoryMember[]>(),
-  ]);
-  const memberIds = (baseMembers ?? []).map((member) => member.id);
-  const { data: badgeAwards } = memberIds.length
-    ? await supabase
-        .from("member_badges")
-        .select("member_id, quantity, badge:badge_definitions(slug, name, description, icon_key, color)")
-        .in("member_id", memberIds)
-        .returns<MemberBadgeAward[]>()
-    : { data: [] as MemberBadgeAward[] };
-  const members = attachBadgesToMembers(baseMembers, badgeAwards);
+  const [{ data: currentMember }, { data: espnTeams, error: teamsError }, { data: links }] =
+    await Promise.all([
+      supabase
+        .from("league_members")
+        .select("display_name, team_name, is_member, is_admin, revoked_at")
+        .eq("auth_user_id", user.id)
+        .maybeSingle<HeaderMember>(),
+      supabase
+        .from("espn_teams")
+        .select("season, espn_member_id, espn_team_id, team_name, logo_url")
+        .not("espn_member_id", "is", null)
+        .order("season", { ascending: false })
+        .returns<EspnTeamRow[]>(),
+      supabase
+        .from("member_team_links")
+        .select("espn_member_id, member:league_members(id, display_name, team_name)")
+        .returns<TeamLinkRow[]>(),
+    ]);
+
+  const teams = latestTeamsByOwner(espnTeams ?? []);
+  const linksByEspnId = new Map((links ?? []).map((link) => [link.espn_member_id, link.member]));
 
   return (
     <main className="min-h-dvh bg-[#f7f8f4] text-[#111411]">
@@ -76,50 +74,92 @@ export default async function MembersPage() {
           <div className="flex items-center gap-3">
             <UsersRound className="text-[#587246]" size={22} aria-hidden="true" />
             <div>
-              <h1 className="text-2xl font-semibold">Members</h1>
-              <p className="mt-1 text-sm text-[#626b59]">Active league profiles</p>
+              <h1 className="text-2xl font-semibold">Teams</h1>
+              <p className="mt-1 text-sm text-[#626b59]">ESPN teams and linked League Office profiles</p>
             </div>
           </div>
         </header>
 
-        {membersError ? (
+        {teamsError ? (
           <p className="rounded-[10px] border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-800">
-            Members could not load: {membersError.message}
+            Teams could not load.
           </p>
-        ) : (
-        <div className="grid gap-3">
-          {members.map((member) => (
-            <Link
-              className="group rounded-[10px] border border-[#d9decf] bg-white p-4 shadow-sm transition hover:border-[#b9c7ad] hover:bg-[#fbfcf8]"
-              href={`/members/${member.id}`}
-              key={member.id}
-            >
-              <article className="flex items-center gap-3">
-                <MemberAvatar color={member.avatar_color} name={memberDisplayName(member)} />
-                <div className="min-w-0 flex-1">
-                  <h2 className="truncate text-lg font-semibold text-[#293421]">
-                    {memberDisplayName(member)}
-                  </h2>
-                  <p className="truncate text-sm text-[#626b59]">{memberSubtitle(member)}</p>
-                  {member.badges?.length ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {member.badges.map((badge) => (
-                        <BadgePill badge={badge} compact key={badge.badge?.slug ?? badge.quantity} />
-                      ))}
+        ) : teams.length ? (
+          <div className="grid gap-3">
+            {teams.map((team) => {
+              const linkedMember = linksByEspnId.get(team.espn_member_id ?? "");
+              return (
+                <Link
+                  className="group rounded-[10px] border border-[#d9decf] bg-white p-4 shadow-sm transition hover:border-[#b9c7ad] hover:bg-[#fbfcf8]"
+                  href={`/teams/${encodeURIComponent(team.espn_member_id ?? "")}`}
+                  key={team.espn_member_id}
+                >
+                  <article className="flex items-center gap-3">
+                    <TeamLogo logoUrl={team.logo_url} teamName={team.team_name} />
+                    <div className="min-w-0 flex-1">
+                      <h2 className="truncate text-lg font-semibold text-[#293421]">{team.team_name}</h2>
+                      <p className="truncate text-sm text-[#626b59]">
+                        {linkedMember ? `Linked to ${linkedMember.display_name}` : "Not linked yet"}
+                      </p>
+                      <span
+                        className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          linkedMember ? "bg-[#e9eee0] text-[#3e4a36]" : "bg-amber-50 text-amber-800"
+                        }`}
+                      >
+                        {linkedMember ? <ShieldCheck size={13} aria-hidden="true" /> : <Link2 size={13} aria-hidden="true" />}
+                        {linkedMember ? "Profile connected" : "Awaiting profile link"}
+                      </span>
                     </div>
-                  ) : null}
-                </div>
-                <ChevronRight
-                  className="shrink-0 text-[#8a9380] transition group-hover:translate-x-0.5 group-hover:text-[#587246]"
-                  size={19}
-                  aria-hidden="true"
-                />
-              </article>
-            </Link>
-          ))}
-        </div>
+                    <ChevronRight
+                      className="shrink-0 text-[#8a9380] transition group-hover:translate-x-0.5 group-hover:text-[#587246]"
+                      size={19}
+                      aria-hidden="true"
+                    />
+                  </article>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="rounded-[10px] border border-dashed border-[#d9decf] bg-white p-4 text-sm leading-6 text-[#626b59]">
+            Refresh ESPN analytics from the admin screen to load teams.
+          </p>
         )}
       </section>
     </main>
+  );
+}
+
+function latestTeamsByOwner(rows: EspnTeamRow[]) {
+  const latestSeason = Math.max(...rows.map((row) => row.season));
+  const teams = new Map<string, EspnTeamRow>();
+
+  for (const row of rows.filter((item) => item.season === latestSeason)) {
+    if (!row.espn_member_id || teams.has(row.espn_member_id)) {
+      continue;
+    }
+
+    teams.set(row.espn_member_id, row);
+  }
+
+  return [...teams.values()].sort((a, b) => a.team_name.localeCompare(b.team_name));
+}
+
+function TeamLogo({ logoUrl, teamName }: { logoUrl: string | null; teamName: string }) {
+  if (logoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        alt=""
+        className="h-12 w-12 shrink-0 rounded-full border border-[#d9decf] bg-[#f7f8f4] object-cover"
+        src={logoUrl}
+      />
+    );
+  }
+
+  return (
+    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#183a2b] text-sm font-semibold text-white">
+      {teamName.slice(0, 2).toUpperCase()}
+    </span>
   );
 }
