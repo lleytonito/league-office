@@ -1,13 +1,13 @@
 "use client";
 
 import {
-  unpublishAnnouncementAction,
+  deleteAnnouncementAction,
   updateAnnouncementAction,
   type ProposalActionState,
 } from "@/app/actions/proposals";
 import { ActionFeedback } from "@/components/proposals/action-feedback";
-import { Pin, Save, Trash2 } from "lucide-react";
-import { useActionState } from "react";
+import { AlertTriangle, Pin, Save, Trash2, X } from "lucide-react";
+import { useActionState, useState } from "react";
 
 type ManagedAnnouncement = {
   id: string;
@@ -25,6 +25,7 @@ export function ManageAnnouncementCard({
   announcement: ManagedAnnouncement;
 }) {
   const [state, formAction, pending] = useActionState(updateAnnouncementAction, initialState);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   return (
     <article className="rounded-[10px] border border-[#d9decf] bg-white p-4 shadow-sm">
@@ -77,15 +78,44 @@ export function ManageAnnouncementCard({
             <Save size={17} aria-hidden="true" />
             Save
           </button>
-          <button
-            className="flex h-11 items-center justify-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
-            disabled={pending}
-            formAction={unpublishAnnouncementAction}
-            type="submit"
-          >
-            <Trash2 size={17} aria-hidden="true" />
-            Take down
-          </button>
+          {isConfirmingDelete ? (
+            <div className="rounded-md border border-red-200 bg-red-50 p-2">
+              <p className="flex items-center gap-2 text-sm font-semibold text-red-800">
+                <AlertTriangle size={16} aria-hidden="true" />
+                Delete this post?
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  className="flex h-10 items-center justify-center gap-2 rounded-md border border-red-200 bg-white px-3 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+                  disabled={pending}
+                  onClick={() => setIsConfirmingDelete(false)}
+                  type="button"
+                >
+                  <X size={16} aria-hidden="true" />
+                  Cancel
+                </button>
+                <button
+                  className="flex h-10 items-center justify-center gap-2 rounded-md bg-red-700 px-3 text-sm font-semibold text-white transition hover:bg-red-800 disabled:opacity-60"
+                  disabled={pending}
+                  formAction={deleteAnnouncementAction}
+                  type="submit"
+                >
+                  <Trash2 size={16} aria-hidden="true" />
+                  Delete
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              className="flex h-11 items-center justify-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+              disabled={pending}
+              onClick={() => setIsConfirmingDelete(true)}
+              type="button"
+            >
+              <Trash2 size={17} aria-hidden="true" />
+              Take down
+            </button>
+          )}
         </div>
       </form>
     </article>

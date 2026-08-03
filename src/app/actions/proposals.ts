@@ -167,7 +167,7 @@ export async function updateAnnouncementAction(
   return { message: "Feed post updated.", ok: true };
 }
 
-export async function unpublishAnnouncementAction(formData: FormData) {
+export async function deleteAnnouncementAction(formData: FormData) {
   const supabase = await createClient();
   const member = await getCurrentMember(supabase);
   const announcementId = stringValue(formData.get("announcementId"));
@@ -176,14 +176,7 @@ export async function unpublishAnnouncementAction(formData: FormData) {
     return;
   }
 
-  await supabase
-    .from("feed_announcements")
-    .update({
-      is_pinned: false,
-      pinned_at: null,
-      published_at: null,
-    })
-    .eq("id", announcementId);
+  await supabase.from("feed_announcements").delete().eq("id", announcementId);
 
   revalidatePath("/");
   revalidatePath("/admin");

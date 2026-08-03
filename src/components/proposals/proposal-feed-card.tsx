@@ -93,30 +93,49 @@ export function ProposalFeedCard({
     ...option,
     count: proposalVotes.filter((vote) => vote.option_id === option.id).length,
   }));
+  const detailsId = `proposal-details-${proposal.id}`;
 
   return (
     <article className="overflow-hidden rounded-[10px] border border-[#d9decf] bg-white shadow-sm">
       <div className="border-l-4 border-[#587246] p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            {proposal.is_pinned ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#edf4e6] px-2.5 py-1 text-xs font-semibold text-[#315235]">
-                <Pin size={13} aria-hidden="true" />
-                Pinned
-              </span>
-            ) : null}
-            <span className="rounded-full bg-[#f2eee8] px-2.5 py-1 text-xs font-semibold capitalize text-[#7a5638]">
-              {proposal.status}
-            </span>
+        <button
+          aria-controls={detailsId}
+          aria-expanded={isExpanded}
+          className="group min-w-0 flex-1 rounded-md text-left outline-none transition focus-visible:ring-2 focus-visible:ring-[#9eb58d]"
+          onClick={() => setIsExpanded((current) => !current)}
+          type="button"
+        >
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                {proposal.is_pinned ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#edf4e6] px-2.5 py-1 text-xs font-semibold text-[#315235]">
+                    <Pin size={13} aria-hidden="true" />
+                    Pinned
+                  </span>
+                ) : null}
+                <span className="rounded-full bg-[#f2eee8] px-2.5 py-1 text-xs font-semibold capitalize text-[#7a5638]">
+                  {proposal.status}
+                </span>
+              </div>
+              <h2 className="mt-3 text-xl font-semibold leading-tight text-[#111411] transition group-hover:text-[#315235]">
+                {proposal.title}
+              </h2>
+              <p className="mt-1 text-sm text-[#6a725f]">
+                {proposal.author?.team_name ?? proposal.author?.display_name ?? "League member"}
+              </p>
+              <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#718063] sm:hidden">
+                {isExpanded ? "Tap to collapse" : "Tap for details"}
+                <ChevronDown
+                  className={`transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`}
+                  size={15}
+                  aria-hidden="true"
+                />
+              </p>
+            </div>
           </div>
-          <h2 className="mt-3 text-xl font-semibold leading-tight text-[#111411]">
-            {proposal.title}
-          </h2>
-          <p className="mt-1 text-sm text-[#6a725f]">
-            {proposal.author?.team_name ?? proposal.author?.display_name ?? "League member"}
-          </p>
-        </div>
+        </button>
         {showAdminControls && isAdmin ? (
           <form action={toggleProposalPinAction}>
             <input name="proposalId" type="hidden" value={proposal.id} />
@@ -132,8 +151,17 @@ export function ProposalFeedCard({
         ) : null}
       </div>
 
-      <div className={isExpanded ? "mt-4 block" : "mt-4 hidden sm:block"}>
-        <p className="text-base leading-7 text-[#374032]">{proposal.summary}</p>
+      <div
+        className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ease-out motion-reduce:transition-none ${
+          isExpanded
+            ? "mt-4 grid-rows-[1fr] opacity-100"
+            : "mt-0 grid-rows-[0fr] opacity-0 sm:mt-4 sm:grid-rows-[1fr] sm:opacity-100"
+        }`}
+        id={detailsId}
+      >
+        <div className="overflow-hidden">
+          <p className="text-base leading-7 text-[#374032]">{proposal.summary}</p>
+        </div>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2 text-sm text-[#596153]">
@@ -215,7 +243,14 @@ export function ProposalFeedCard({
       ) : null}
 
       {canSeeResults && proposalVotes.length ? (
-        <div className={isExpanded ? "mt-4 block" : "mt-4 hidden sm:block"}>
+        <div
+          className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ease-out motion-reduce:transition-none ${
+            isExpanded
+              ? "mt-4 grid-rows-[1fr] opacity-100"
+              : "mt-0 grid-rows-[0fr] opacity-0 sm:mt-4 sm:grid-rows-[1fr] sm:opacity-100"
+          }`}
+        >
+          <div className="overflow-hidden">
           <div className="rounded-[10px] bg-[#fbfcf8] p-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-[#293421]">
               <BarChart3 size={16} aria-hidden="true" />
@@ -240,21 +275,9 @@ export function ProposalFeedCard({
               ))}
             </div>
           </div>
+          </div>
         </div>
       ) : null}
-
-      <button
-        className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-full border border-[#d9decf] bg-white text-sm font-semibold text-[#3e4a36] transition hover:bg-[#eef2e8] sm:hidden"
-        onClick={() => setIsExpanded((current) => !current)}
-        type="button"
-      >
-        {isExpanded ? "Show less" : "Read details"}
-        <ChevronDown
-          className={`transition ${isExpanded ? "rotate-180" : ""}`}
-          size={16}
-          aria-hidden="true"
-        />
-      </button>
 
       {showAdminControls && isAdmin && proposal.status === "voting" ? (
         <form action={closeVotingAction} className="mt-4">
