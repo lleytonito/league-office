@@ -47,7 +47,7 @@ export function AppHeader({
           {!isSignedIn ? (
             <GoogleSignInButton
               className="hidden h-10 items-center justify-center gap-2 rounded-full bg-[#183a2b] px-4 text-sm font-semibold text-white transition hover:bg-[#26523e] disabled:opacity-60 sm:flex"
-              label="Sign in"
+              label="Sign in with Google"
             />
           ) : null}
 
@@ -74,7 +74,8 @@ export function AppHeader({
                 <div className="border-t border-[#e8ebdf] p-2 sm:hidden">
                   <GoogleSignInButton
                     className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[#183a2b] px-3 text-sm font-semibold text-white disabled:opacity-60"
-                    label="Sign in"
+                    label="Sign in with Google"
+                    shortLabel="Sign in"
                   />
                 </div>
               )}

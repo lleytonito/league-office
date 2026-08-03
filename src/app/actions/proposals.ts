@@ -119,7 +119,74 @@ export async function createAnnouncementAction(
   }
 
   revalidatePath("/");
+  revalidatePath("/admin");
   return { message: "Pinned feed post published.", ok: true };
+}
+
+export async function updateAnnouncementAction(
+  previousState: ProposalActionState = emptyState,
+  formData: FormData,
+): Promise<ProposalActionState> {
+  void previousState;
+  const supabase = await createClient();
+  const member = await getCurrentMember(supabase);
+
+  if (!member?.isAdmin) {
+    return { message: "Only admins can edit feed posts.", ok: false };
+  }
+
+  const announcementId = stringValue(formData.get("announcementId"));
+  const isPublished = formData.get("isPublished") === "on";
+  const parsed = announcementSchema.safeParse({
+    body: stringValue(formData.get("body")),
+    isPinned: formData.get("isPinned") === "on",
+    title: stringValue(formData.get("title")),
+  });
+
+  if (!announcementId || !parsed.success) {
+    return { message: "Add a title and body for the post.", ok: false };
+  }
+
+  const { error } = await supabase
+    .from("feed_announcements")
+    .update({
+      body: parsed.data.body,
+      is_pinned: parsed.data.isPinned,
+      pinned_at: parsed.data.isPinned ? new Date().toISOString() : null,
+      published_at: isPublished ? new Date().toISOString() : null,
+      title: parsed.data.title,
+    })
+    .eq("id", announcementId);
+
+  if (error) {
+    return { message: error.message, ok: false };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+  return { message: "Feed post updated.", ok: true };
+}
+
+export async function unpublishAnnouncementAction(formData: FormData) {
+  const supabase = await createClient();
+  const member = await getCurrentMember(supabase);
+  const announcementId = stringValue(formData.get("announcementId"));
+
+  if (!member?.isAdmin || !announcementId) {
+    return;
+  }
+
+  await supabase
+    .from("feed_announcements")
+    .update({
+      is_pinned: false,
+      pinned_at: null,
+      published_at: null,
+    })
+    .eq("id", announcementId);
+
+  revalidatePath("/");
+  revalidatePath("/admin");
 }
 
 export async function approveProposalAction(
@@ -217,6 +284,7 @@ export async function approveProposalAction(
   });
 
   revalidatePath("/");
+  revalidatePath("/admin");
   return { message: "Proposal approved and opened for voting.", ok: true };
 }
 
@@ -246,6 +314,7 @@ export async function rejectProposalAction(formData: FormData) {
   });
 
   revalidatePath("/");
+  revalidatePath("/admin");
 }
 
 export async function closeVotingAction(formData: FormData) {
@@ -285,6 +354,7 @@ export async function closeVotingAction(formData: FormData) {
     .eq("proposal_id", proposalId);
 
   revalidatePath("/");
+  revalidatePath("/admin");
 }
 
 export async function toggleProposalPinAction(formData: FormData) {
@@ -306,6 +376,7 @@ export async function toggleProposalPinAction(formData: FormData) {
     .eq("id", proposalId);
 
   revalidatePath("/");
+  revalidatePath("/admin");
 }
 
 export async function castVoteAction(formData: FormData) {
@@ -325,6 +396,7 @@ export async function castVoteAction(formData: FormData) {
   });
 
   revalidatePath("/");
+  revalidatePath("/admin");
 }
 
 function defaultVotingDeadline() {

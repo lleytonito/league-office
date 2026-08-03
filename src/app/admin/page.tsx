@@ -1,4 +1,5 @@
 import { AnnouncementForm } from "@/components/admin/announcement-form";
+import { ManageAnnouncementCard } from "@/components/admin/manage-announcement-card";
 import { MemberAccessForm } from "@/components/admin/member-access-form";
 import { ReviewProposalCard } from "@/components/admin/review-proposal-card";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
@@ -40,10 +41,22 @@ type ReviewProposal = {
   }>;
 };
 
+type ManagedAnnouncement = {
+  id: string;
+  body: string;
+  is_pinned: boolean;
+  published_at: string | null;
+  title: string;
+};
+
 type VoteRow = {
   option_id: string;
   proposal_id: string;
   voter_member_id: string;
+  voter: {
+    display_name: string;
+    team_name: string | null;
+  } | null;
 };
 
 export default async function AdminPage() {
@@ -63,8 +76,15 @@ export default async function AdminPage() {
   const isAdmin = Boolean(member?.is_admin && member.is_member && !member.revoked_at);
   const isMemberActive = Boolean(member?.is_member && !member.revoked_at);
 
-  const [reviewResult, membersResult, activeResult, votesResult] = isAdmin
+  const [announcementResult, reviewResult, membersResult, activeResult, votesResult] = isAdmin
     ? await Promise.all([
+        supabase
+          .from("feed_announcements")
+          .select("id, title, body, is_pinned, published_at")
+          .order("is_pinned", { ascending: false })
+          .order("pinned_at", { ascending: false, nullsFirst: false })
+          .limit(20)
+          .returns<ManagedAnnouncement[]>(),
         supabase
           .from("proposals")
           .select(
@@ -87,9 +107,15 @@ export default async function AdminPage() {
           .order("published_at", { ascending: false })
           .limit(12)
           .returns<FeedProposal[]>(),
-        supabase.from("votes").select("proposal_id, option_id, voter_member_id").returns<VoteRow[]>(),
+        supabase
+          .from("votes")
+          .select(
+            "proposal_id, option_id, voter_member_id, voter:league_members!votes_voter_member_id_fkey(display_name, team_name)",
+          )
+          .returns<VoteRow[]>(),
       ])
     : [
+        { data: [] as ManagedAnnouncement[] },
         { data: [] as ReviewProposal[] },
         { data: [] as DirectoryMember[] },
         { data: [] as FeedProposal[] },
@@ -106,6 +132,7 @@ export default async function AdminPage() {
     options: [...proposal.options].sort((a, b) => a.sort_order - b.sort_order),
   }));
   const votes = votesResult.data ?? [];
+  const announcements = announcementResult.data ?? [];
 
   return (
     <main className="min-h-dvh bg-[#f7f8f4] text-[#111411]">
@@ -124,7 +151,8 @@ export default async function AdminPage() {
             </p>
             <GoogleSignInButton
               className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#183a2b] px-4 text-sm font-semibold text-white transition hover:bg-[#26523e] disabled:opacity-60"
-              label="Sign in"
+              label="Sign in with Google"
+              shortLabel="Sign in"
             />
           </GateCard>
         ) : !isAdmin ? (
@@ -145,6 +173,24 @@ export default async function AdminPage() {
               </div>
               <div className="mt-4">
                 <AnnouncementForm />
+              </div>
+            </section>
+
+            <section className="rounded-[10px] border border-[#d9decf] bg-[#fbfcf8] p-5 shadow-sm">
+              <h2 className="text-2xl font-semibold">Pinned posts</h2>
+              <div className="mt-4 grid gap-3">
+                {announcements.length ? (
+                  announcements.map((announcement) => (
+                    <ManageAnnouncementCard
+                      announcement={announcement}
+                      key={announcement.id}
+                    />
+                  ))
+                ) : (
+                  <p className="rounded-[10px] border border-dashed border-[#d9decf] bg-white p-4 text-sm leading-6 text-[#626b59]">
+                    No published posts to manage.
+                  </p>
+                )}
               </div>
             </section>
 
@@ -174,6 +220,7 @@ export default async function AdminPage() {
                       key={proposal.id}
                       memberId={member?.id ?? null}
                       proposal={proposal}
+                      revealResultsForAdmin
                       showAdminControls
                       votes={votes}
                     />

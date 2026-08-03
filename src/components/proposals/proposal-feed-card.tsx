@@ -1,9 +1,21 @@
+"use client";
+
 import {
   castVoteAction,
   closeVotingAction,
   toggleProposalPinAction,
 } from "@/app/actions/proposals";
-import { BarChart3, CheckCircle2, Clock, Lock, Pin, PinOff, Vote } from "lucide-react";
+import {
+  BarChart3,
+  CheckCircle2,
+  ChevronDown,
+  Clock,
+  Lock,
+  Pin,
+  PinOff,
+  Vote,
+} from "lucide-react";
+import { useState } from "react";
 
 export type FeedProposal = {
   id: string;
@@ -37,6 +49,10 @@ type VoteRow = {
   option_id: string;
   proposal_id: string;
   voter_member_id: string;
+  voter: {
+    display_name: string;
+    team_name: string | null;
+  } | null;
 };
 
 export function ProposalFeedCard({
@@ -44,6 +60,7 @@ export function ProposalFeedCard({
   isMemberActive,
   memberId,
   proposal,
+  revealResultsForAdmin = false,
   showAdminControls = false,
   votes,
 }: {
@@ -51,9 +68,11 @@ export function ProposalFeedCard({
   isMemberActive: boolean;
   memberId: string | null;
   proposal: FeedProposal;
+  revealResultsForAdmin?: boolean;
   showAdminControls?: boolean;
   votes: VoteRow[];
 }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const proposalVotes = votes.filter((vote) => vote.proposal_id === proposal.id);
   const userVote = memberId
     ? proposalVotes.find((vote) => vote.voter_member_id === memberId)
@@ -66,7 +85,9 @@ export function ProposalFeedCard({
       !proposal.window.closed_at &&
       new Date(proposal.window.ends_at) > new Date(),
   );
-  const canSeeResults = Boolean(isAdmin || userVote || proposal.status === "closed");
+  const canSeeResults = Boolean(
+    (revealResultsForAdmin && isAdmin) || userVote || proposal.status === "closed",
+  );
   const totalVotes = proposalVotes.length;
   const counts = proposal.options.map((option) => ({
     ...option,
@@ -111,7 +132,9 @@ export function ProposalFeedCard({
         ) : null}
       </div>
 
-      <p className="mt-4 text-base leading-7 text-[#374032]">{proposal.summary}</p>
+      <div className={isExpanded ? "mt-4 block" : "mt-4 hidden sm:block"}>
+        <p className="text-base leading-7 text-[#374032]">{proposal.summary}</p>
+      </div>
 
       <div className="mt-4 flex flex-wrap gap-2 text-sm text-[#596153]">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f4f8ef] px-3 py-1.5">
@@ -191,6 +214,48 @@ export function ProposalFeedCard({
         </p>
       ) : null}
 
+      {canSeeResults && proposalVotes.length ? (
+        <div className={isExpanded ? "mt-4 block" : "mt-4 hidden sm:block"}>
+          <div className="rounded-[10px] bg-[#fbfcf8] p-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-[#293421]">
+              <BarChart3 size={16} aria-hidden="true" />
+              Vote activity
+            </div>
+            <div className="mt-3 grid gap-2">
+              {proposalVotes.map((vote) => (
+                <div className="flex items-center gap-3 text-sm" key={vote.voter_member_id}>
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#edf4e6] text-xs font-bold text-[#315235]">
+                    {initials(vote.voter?.team_name ?? vote.voter?.display_name ?? "LM")}
+                  </div>
+                  <p className="min-w-0 text-[#626b59]">
+                    <span className="font-semibold text-[#293421]">
+                      {vote.voter?.team_name ?? vote.voter?.display_name ?? "League member"}
+                    </span>{" "}
+                    voted for{" "}
+                    <span className="font-semibold text-[#293421]">
+                      {proposal.options.find((option) => option.id === vote.option_id)?.label ?? "an option"}
+                    </span>
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <button
+        className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-full border border-[#d9decf] bg-white text-sm font-semibold text-[#3e4a36] transition hover:bg-[#eef2e8] sm:hidden"
+        onClick={() => setIsExpanded((current) => !current)}
+        type="button"
+      >
+        {isExpanded ? "Show less" : "Read details"}
+        <ChevronDown
+          className={`transition ${isExpanded ? "rotate-180" : ""}`}
+          size={16}
+          aria-hidden="true"
+        />
+      </button>
+
       {showAdminControls && isAdmin && proposal.status === "voting" ? (
         <form action={closeVotingAction} className="mt-4">
           <input name="proposalId" type="hidden" value={proposal.id} />
@@ -205,6 +270,16 @@ export function ProposalFeedCard({
       </div>
     </article>
   );
+}
+
+function initials(value: string) {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 }
 
 function formatShortDate(value: string | null | undefined) {

@@ -55,7 +55,8 @@ export default async function ProfilePage() {
               </p>
               <GoogleSignInButton
                 className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#183a2b] px-4 text-sm font-semibold text-white transition hover:bg-[#26523e] disabled:opacity-60"
-                label="Sign in"
+                label="Sign in with Google"
+                shortLabel="Sign in"
               />
             </div>
           )}

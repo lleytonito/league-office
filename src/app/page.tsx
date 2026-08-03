@@ -27,6 +27,10 @@ type VoteRow = {
   option_id: string;
   proposal_id: string;
   voter_member_id: string;
+  voter: {
+    display_name: string;
+    team_name: string | null;
+  } | null;
 };
 
 export default async function Home() {
@@ -69,7 +73,12 @@ export default async function Home() {
       .limit(20)
       .returns<FeedProposal[]>(),
     member
-      ? supabase.from("votes").select("proposal_id, option_id, voter_member_id").returns<VoteRow[]>()
+      ? supabase
+          .from("votes")
+          .select(
+            "proposal_id, option_id, voter_member_id, voter:league_members!votes_voter_member_id_fkey(display_name, team_name)",
+          )
+          .returns<VoteRow[]>()
       : Promise.resolve({ data: [] as VoteRow[] }),
   ]);
 
@@ -88,7 +97,7 @@ export default async function Home() {
         <h1 className="sr-only">League feed</h1>
 
         <div className="grid gap-3">
-          {announcements.map((announcement, index) => (
+          {announcements.map((announcement) => (
             <article
               className="overflow-hidden rounded-[10px] border border-[#cfd8c4] bg-[#183a2b] text-white shadow-sm"
               key={announcement.id}
@@ -100,7 +109,7 @@ export default async function Home() {
                 </div>
                 <h2 className="mt-3 text-2xl font-semibold leading-tight">{announcement.title}</h2>
                 <p className="mt-3 text-base leading-7 text-[#edf4e6]">{announcement.body}</p>
-                {index === 0 ? (
+                {isOriginalWelcomePost(announcement) ? (
                   <Link
                     className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-[#183a2b] transition hover:bg-[#edf4e6]"
                     href="/submit"
@@ -143,4 +152,8 @@ export default async function Home() {
       </section>
     </main>
   );
+}
+
+function isOriginalWelcomePost(announcement: FeedAnnouncement) {
+  return announcement.title.trim().toLowerCase() === "welcome to league office";
 }
