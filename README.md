@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# League Office
 
-## Getting Started
+League Office is a fantasy football league governance app for commissioner-managed proposals, voting windows, member access, and audit history.
 
-First, run the development server:
+## Environments
+
+- Production: https://league-office.netlify.app
+- Dev branch deploy: https://dev--league-office.netlify.app
+- GitHub repo: https://github.com/lleytonito/league-office
+- Supabase project ref: `lqduwieteamxlbnsjyxb`
+
+## Local Setup
 
 ```bash
+npm install
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Fill `.env.local` with the Supabase publishable key from the Supabase dashboard or Netlify environment settings.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Supabase Auth URLs
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Supabase `Authentication` -> `URL Configuration` should use:
 
-## Learn More
+- Site URL: `https://league-office.netlify.app`
+- Redirect URL: `https://league-office.netlify.app/auth/callback`
+- Redirect URL: `https://dev--league-office.netlify.app/auth/callback`
+- Redirect URL: `http://127.0.0.1:3000/auth/callback`
+- Redirect URL: `http://localhost:3000/auth/callback`
 
-To learn more about Next.js, take a look at the following resources:
+Google Cloud OAuth should allow the Supabase provider callback:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```text
+https://lqduwieteamxlbnsjyxb.supabase.co/auth/v1/callback
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Database
 
-## Deploy on Vercel
+The current remote schema is captured in:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```text
+supabase/migrations/20260803063000_initial_league_office_schema.sql
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The Supabase CLI scaffold is present in `supabase/config.toml`, but the local CLI still needs a Supabase access token before `supabase link` and `supabase db pull` can run.
+
+```bash
+npx supabase login
+npx supabase link --project-ref lqduwieteamxlbnsjyxb
+npx supabase db pull verify_remote_schema --linked --schema public,app_private
+```
+
+Use the pulled diff as a verification artifact before changing the remote schema.
+
+## Verification
+
+```bash
+npm run lint
+npm run test:run
+npm run build
+npm run e2e
+```
+
+For the Windows mobile wrapper:
+
+```bash
+npm run e2e:mobile
+```

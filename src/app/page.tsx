@@ -1,5 +1,7 @@
+import { MemberAccessForm } from "@/components/admin/member-access-form";
 import { LoginWall } from "@/components/auth/login-wall";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { canManageMember, getMemberStatusLabel } from "@/lib/members/status";
 import { createClient } from "@/lib/supabase/server";
 import {
   ClipboardList,
@@ -12,11 +14,17 @@ import {
 } from "lucide-react";
 
 type Member = {
+  id: string;
   display_name: string;
   is_admin: boolean;
   is_member: boolean;
   revoked_at: string | null;
   team_name: string | null;
+};
+
+type DirectoryMember = Member & {
+  created_at: string;
+  updated_at: string;
 };
 
 type Proposal = {
@@ -39,7 +47,7 @@ export default async function Home() {
 
   const { data: member } = await supabase
     .from("league_members")
-    .select("display_name, team_name, is_member, is_admin, revoked_at")
+    .select("id, display_name, team_name, is_member, is_admin, revoked_at")
     .eq("auth_user_id", user.id)
     .maybeSingle<Member>();
 
@@ -49,6 +57,14 @@ export default async function Home() {
     .order("created_at", { ascending: false })
     .limit(5)
     .returns<Proposal[]>();
+
+  const { data: members } = member?.is_admin
+    ? await supabase
+        .from("league_members")
+        .select("id, display_name, team_name, is_member, is_admin, revoked_at, created_at, updated_at")
+        .order("created_at", { ascending: true })
+        .returns<DirectoryMember[]>()
+    : { data: null };
 
   const isReadOnly = !member?.is_member || Boolean(member.revoked_at);
 
@@ -156,9 +172,87 @@ export default async function Home() {
             </div>
           </aside>
         </section>
+
+        {member?.is_admin ? (
+          <section className="rounded-lg border border-[#d9decf] bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold">Member Directory</h2>
+                <p className="mt-1 text-sm leading-6 text-[#626b59]">
+                  Review who has signed in and manage league access before votes
+                  begin.
+                </p>
+              </div>
+              <span className="w-fit rounded-full bg-[#e9eee0] px-3 py-1 text-xs font-semibold text-[#3e4a36]">
+                {members?.length ?? 0} total
+              </span>
+            </div>
+
+            <div className="mt-5 overflow-hidden rounded-lg border border-[#e1e5d9]">
+              <div className="hidden grid-cols-[1.2fr_0.9fr_0.7fr_3rem] gap-3 bg-[#fbfcf8] px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#626b59] md:grid">
+                <span>Member</span>
+                <span>Team</span>
+                <span>Status</span>
+                <span className="text-right">Act</span>
+              </div>
+
+              <div className="divide-y divide-[#e1e5d9]">
+                {members?.map((directoryMember) => {
+                  const isRevoked =
+                    !directoryMember.is_member || Boolean(directoryMember.revoked_at);
+                  return (
+                    <article
+                      key={directoryMember.id}
+                      className="grid gap-3 px-4 py-4 md:grid-cols-[1.2fr_0.9fr_0.7fr_3rem] md:items-center"
+                    >
+                      <div className="min-w-0">
+                        <h3 className="truncate text-sm font-semibold">
+                          {directoryMember.display_name}
+                        </h3>
+                        <p className="mt-1 text-xs text-[#626b59]">
+                          Joined {formatDate(directoryMember.created_at)}
+                        </p>
+                      </div>
+
+                      <p className="truncate text-sm text-[#3e4a36]">
+                        {directoryMember.team_name ?? "No team set"}
+                      </p>
+
+                      <span
+                        className={`w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          isRevoked
+                            ? "bg-amber-50 text-amber-800"
+                            : "bg-[#e9eee0] text-[#3e4a36]"
+                        }`}
+                      >
+                        {getMemberStatusLabel(directoryMember)}
+                      </span>
+
+                      <div className="flex justify-end">
+                        <MemberAccessForm
+                          disabled={!canManageMember(member.id, directoryMember.id)}
+                          isRevoked={isRevoked}
+                          memberId={directoryMember.id}
+                        />
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        ) : null}
       </section>
     </main>
   );
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
 }
 
 function StatusCard({

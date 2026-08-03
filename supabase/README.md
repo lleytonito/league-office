@@ -4,6 +4,10 @@ Project: `league-office`
 
 Project ref: `lqduwieteamxlbnsjyxb`
 
+Local migration snapshot:
+
+- `migrations/20260803063000_initial_league_office_schema.sql`
+
 Applied setup:
 
 - `league_members`
@@ -25,3 +29,9 @@ Google OAuth still needs provider credentials in the Supabase dashboard:
 - Local URL: `http://127.0.0.1:3000`
 - App callback: `/auth/callback`
 - Supabase provider callback: `https://lqduwieteamxlbnsjyxb.supabase.co/auth/v1/callback`
+
+CLI status:
+
+- `supabase/config.toml` has been initialized.
+- `supabase link` is blocked until the local CLI has a Supabase access token.
+- Run `npx supabase login`, then `npx supabase link --project-ref lqduwieteamxlbnsjyxb`.

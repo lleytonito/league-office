@@ -13,6 +13,8 @@
 # testing
 /coverage
 /artifacts
+/playwright-report
+/test-results
 
 # next.js
 /.next/
@@ -25,6 +27,7 @@
 .DS_Store
 deno.lock
 *.pem
+.tmp-supabase-init/
 
 # debug
 npm-debug.log*
@@ -34,6 +37,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
