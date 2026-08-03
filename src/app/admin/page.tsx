@@ -1,4 +1,5 @@
 import { AnnouncementForm } from "@/components/admin/announcement-form";
+import { HomeActionsSettingsForm } from "@/components/admin/home-actions-settings-form";
 import { ManageAnnouncementCard } from "@/components/admin/manage-announcement-card";
 import { MemberAccessForm } from "@/components/admin/member-access-form";
 import { MemberProfileAdminForm } from "@/components/admin/member-profile-admin-form";
@@ -76,6 +77,12 @@ type VoteRow = {
   } | null;
 };
 
+type HomeActionsSetting = {
+  value: {
+    visible?: boolean;
+  } | null;
+};
+
 export default async function AdminPage() {
   const supabase = await createClient();
   const {
@@ -93,7 +100,7 @@ export default async function AdminPage() {
   const isAdmin = Boolean(member?.is_admin && member.is_member && !member.revoked_at);
   const isMemberActive = Boolean(member?.is_member && !member.revoked_at);
 
-  const [announcementResult, reviewResult, membersResult, activeResult, votesResult] = isAdmin
+  const [announcementResult, reviewResult, membersResult, activeResult, votesResult, homeActionsResult] = isAdmin
     ? await Promise.all([
         supabase
           .from("feed_announcements")
@@ -130,6 +137,11 @@ export default async function AdminPage() {
             "proposal_id, option_id, voter_member_id, voter:league_members!votes_voter_member_id_fkey(id, display_name, team_name, avatar_color)",
           )
           .returns<VoteRow[]>(),
+        supabase
+          .from("app_settings")
+          .select("value")
+          .eq("key", "home_actions")
+          .maybeSingle<HomeActionsSetting>(),
       ])
     : [
         { data: [] as ManagedAnnouncement[] },
@@ -137,6 +149,7 @@ export default async function AdminPage() {
         { data: [] as DirectoryMember[] },
         { data: [] as FeedProposal[] },
         { data: [] as VoteRow[] },
+        { data: null as HomeActionsSetting | null },
       ];
 
   const memberIds = uniqueStrings([
@@ -173,12 +186,14 @@ export default async function AdminPage() {
     voter: vote.voter ? { ...vote.voter, badges: badgesForMember(badgeAwards, vote.voter.id) } : null,
   }));
   const announcements = announcementResult.data ?? [];
+  const homeActionsVisible = homeActionsResult.data?.value?.visible ?? true;
   const queryErrorMessages = [
     announcementResult.error,
     reviewResult.error,
     membersResult.error,
     activeResult.error,
     votesResult.error,
+    homeActionsResult.error,
   ].flatMap((error) => (error ? [error.message] : []));
 
   return (
@@ -249,6 +264,16 @@ export default async function AdminPage() {
                     No published posts to manage.
                   </p>
                 )}
+              </div>
+            </section>
+
+            <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm">
+              <h2 className="text-2xl font-semibold">Home feed actions</h2>
+              <p className="mt-2 text-sm leading-6 text-[#626b59]">
+                Controls the short voting note plus the Submit proposal and Last Year&apos;s Rules buttons.
+              </p>
+              <div className="mt-4">
+                <HomeActionsSettingsForm visible={homeActionsVisible} />
               </div>
             </section>
 

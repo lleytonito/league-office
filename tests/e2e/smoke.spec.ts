@@ -4,8 +4,26 @@ test("loads the public feed without horizontal overflow", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByText(/league office/i).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /submit proposal/i }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /last year's rules/i }).first()).toBeVisible();
   await page.getByLabel(/open navigation menu/i).click();
   await expect(page.getByRole("link", { name: /submit proposal/i }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /last year's rules/i }).first()).toBeVisible();
+
+  const hasHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(hasHorizontalOverflow).toBe(false);
+});
+
+test("loads the static rules screen without horizontal overflow", async ({ page }) => {
+  await page.goto("/rules");
+
+  await expect(page.getByRole("heading", { name: /last year's rules/i })).toBeVisible();
+  await expect(page.getByText(/Lleyton's All stars/i)).toBeVisible();
+  await expect(page.getByText(/Head to Head Points/i)).toBeVisible();
+  await page.locator("summary").filter({ hasText: /^Passing/ }).click();
+  await expect(page.getByText(/TD Pass \(PTD\)/i)).toBeVisible();
 
   const hasHorizontalOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,

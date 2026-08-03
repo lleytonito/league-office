@@ -1,4 +1,5 @@
 import { AppHeader } from "@/components/layout/app-header";
+import { HomeActionPanel } from "@/components/feed/home-action-panel";
 import { ProposalFeedCard, type FeedProposal } from "@/components/proposals/proposal-feed-card";
 import { badgesForMember, type MemberBadge, type MemberBadgeAward } from "@/lib/members/badges";
 import { createClient } from "@/lib/supabase/server";
@@ -37,6 +38,12 @@ type VoteRow = {
   } | null;
 };
 
+type HomeActionsSetting = {
+  value: {
+    visible?: boolean;
+  } | null;
+};
+
 const signedInProposalSelect =
   "id, title, summary, status, is_pinned, pinned_at, published_at, voting_closes_at, closed_at, passed, created_at, author:league_members!proposals_author_member_id_fkey(id, display_name, team_name, avatar_color), options:proposal_vote_options(id, label, sort_order), window:voting_windows!voting_windows_proposal_id_fkey(starts_at, ends_at, closed_at)";
 
@@ -60,7 +67,7 @@ export default async function Home() {
   const isMemberActive = Boolean(member?.is_member && !member.revoked_at);
   const isAdmin = Boolean(member?.is_admin && member.is_member && !member.revoked_at);
 
-  const [announcementsResult, proposalsResult, votesResult] = await Promise.all([
+  const [announcementsResult, proposalsResult, votesResult, homeActionsResult] = await Promise.all([
     supabase
       .from("feed_announcements")
       .select("id, title, body, is_pinned, pinned_at, published_at, created_at")
@@ -88,9 +95,15 @@ export default async function Home() {
           )
           .returns<VoteRow[]>()
       : Promise.resolve({ data: [] as VoteRow[] }),
+    supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "home_actions")
+      .maybeSingle<HomeActionsSetting>(),
   ]);
 
   const announcements = announcementsResult.data ?? [];
+  const showHomeActions = homeActionsResult.data?.value?.visible ?? true;
   const badgeMemberIds = uniqueStrings([
     ...(proposalsResult.data ?? []).map((proposal) => proposal.author?.id),
     ...(votesResult.data ?? []).map((vote) => vote.voter?.id),
@@ -134,18 +147,11 @@ export default async function Home() {
                 </div>
                 <h2 className="mt-3 text-2xl font-semibold leading-tight">{announcement.title}</h2>
                 <p className="mt-3 text-base leading-7 text-[#edf4e6]">{announcement.body}</p>
-                {isOriginalWelcomePost(announcement) ? (
-                  <Link
-                    className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-[#183a2b] transition hover:bg-[#edf4e6]"
-                    href="/submit"
-                  >
-                    <Plus size={17} aria-hidden="true" />
-                    Submit proposal
-                  </Link>
-                ) : null}
               </div>
             </article>
           ))}
+
+          {showHomeActions ? <HomeActionPanel /> : null}
 
           {proposals.map((proposal) => (
             <ProposalFeedCard
@@ -164,13 +170,15 @@ export default async function Home() {
               <p className="mt-2 text-sm leading-6 text-[#626b59]">
                 Once proposals are approved or posts are pinned, they will show up here.
               </p>
-              <Link
-                className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#183a2b] px-4 text-sm font-semibold text-white transition hover:bg-[#26523e]"
-                href="/submit"
-              >
-                <Plus size={17} aria-hidden="true" />
-                Submit proposal
-              </Link>
+              {showHomeActions ? (
+                <Link
+                  className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#183a2b] px-4 text-sm font-semibold text-white transition hover:bg-[#26523e]"
+                  href="/submit"
+                >
+                  <Plus size={17} aria-hidden="true" />
+                  Submit proposal
+                </Link>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -181,8 +189,4 @@ export default async function Home() {
 
 function uniqueStrings(values: Array<string | null | undefined>) {
   return [...new Set(values.filter((value): value is string => Boolean(value)))];
-}
-
-function isOriginalWelcomePost(announcement: FeedAnnouncement) {
-  return announcement.title.trim().toLowerCase() === "welcome to league office";
 }
