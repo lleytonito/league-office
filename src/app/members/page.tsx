@@ -101,9 +101,6 @@ export default async function MembersPage() {
                     {memberDisplayName(member)}
                   </h2>
                   <p className="truncate text-sm text-[#626b59]">{memberSubtitle(member)}</p>
-                  {member.profile_bio ? (
-                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#4c5547]">{member.profile_bio}</p>
-                  ) : null}
                   {member.badges?.length ? (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {member.badges.map((badge) => (

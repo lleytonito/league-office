@@ -94,13 +94,6 @@ export default async function MemberProfilePage({
               </div>
             </div>
 
-            {member.profile_bio ? (
-              <p className="mt-6 text-base leading-7 text-[#374032]">{member.profile_bio}</p>
-            ) : (
-              <p className="mt-6 rounded-[10px] border border-dashed border-[#d9decf] bg-[#fbfcf8] p-4 text-sm leading-6 text-[#626b59]">
-                This profile is waiting on a bio.
-              </p>
-            )}
           </div>
         </article>
 

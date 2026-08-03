@@ -2,14 +2,14 @@ export function memberDisplayName(member: {
   display_name: string;
   team_name: string | null;
 }) {
-  return member.team_name || member.display_name;
+  return member.display_name;
 }
 
 export function memberSubtitle(member: {
   display_name: string;
   team_name: string | null;
 }) {
-  return member.team_name ? member.display_name : "No team set";
+  return member.team_name ?? "No team set";
 }
 
 export function initials(value: string) {

@@ -8,7 +8,6 @@ import { useActionState } from "react";
 type EditableProfile = {
   avatar_color: string | null;
   display_name: string;
-  profile_bio: string | null;
   team_name: string | null;
 };
 
@@ -41,18 +40,6 @@ export function ProfileForm({ member }: { member: EditableProfile }) {
           maxLength={80}
           name="teamName"
           placeholder="Add your team name"
-        />
-      </label>
-
-      <label className="grid gap-2 text-sm font-semibold text-[#293421]">
-        Bio
-        <textarea
-          className="min-h-28 rounded-md border border-[#d9decf] bg-white px-3 py-3 text-base leading-6 outline-none transition focus:border-[#587246] focus:ring-2 focus:ring-[#d9e5c9]"
-          defaultValue={member.profile_bio ?? ""}
-          disabled={pending}
-          maxLength={280}
-          name="profileBio"
-          placeholder="A short line about your team, style, or league lore."
         />
       </label>
 

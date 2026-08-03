@@ -4,7 +4,7 @@ import { ProfileForm } from "@/components/members/profile-form";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { AppHeader } from "@/components/layout/app-header";
 import { attachBadgesToMember, type MemberBadge, type MemberBadgeAward } from "@/lib/members/badges";
-import { memberDisplayName } from "@/lib/members/display";
+import { memberDisplayName, memberSubtitle } from "@/lib/members/display";
 import { createClient } from "@/lib/supabase/server";
 import { ArrowLeft, Eye, Trophy, UserRound } from "lucide-react";
 import Link from "next/link";
@@ -71,7 +71,7 @@ export default async function ProfilePage() {
                     {memberDisplayName(member)}
                   </p>
                   <p className="truncate text-sm text-[#626b59]">
-                    {member.team_name ? member.display_name : "No team set"}
+                    {memberSubtitle(member)}
                   </p>
                 </div>
               </div>
@@ -97,7 +97,7 @@ export default async function ProfilePage() {
                   </div>
                 ) : (
                   <p className="mt-3 text-sm leading-6 text-[#626b59]">
-                    Badges appear here after the commissioner awards them.
+                    Badges appear here.
                   </p>
                 )}
               </section>

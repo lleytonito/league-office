@@ -39,7 +39,7 @@ export function AppHeader({
               League Office
             </p>
             <p className="truncate text-sm text-[#6a725f]">
-              {member?.team_name ?? member?.display_name ?? userEmail ?? "Public feed"}
+              {member?.display_name ?? userEmail ?? "Public feed"}
             </p>
           </div>
         </Link>
