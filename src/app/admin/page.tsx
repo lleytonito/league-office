@@ -9,6 +9,7 @@ import { AppHeader } from "@/components/layout/app-header";
 import { BadgePill } from "@/components/members/badge-pill";
 import { MemberIdentity } from "@/components/members/member-identity";
 import { ProposalFeedCard, type FeedProposal } from "@/components/proposals/proposal-feed-card";
+import { probeEspnLeague, type EspnProbeResult } from "@/lib/espn/client";
 import {
   attachBadgesToMembers,
   badgesForMember,
@@ -100,7 +101,15 @@ export default async function AdminPage() {
   const isAdmin = Boolean(member?.is_admin && member.is_member && !member.revoked_at);
   const isMemberActive = Boolean(member?.is_member && !member.revoked_at);
 
-  const [announcementResult, reviewResult, membersResult, activeResult, votesResult, homeActionsResult] = isAdmin
+  const [
+    announcementResult,
+    reviewResult,
+    membersResult,
+    activeResult,
+    votesResult,
+    homeActionsResult,
+    espnProbe,
+  ] = isAdmin
     ? await Promise.all([
         supabase
           .from("feed_announcements")
@@ -142,6 +151,7 @@ export default async function AdminPage() {
           .select("value")
           .eq("key", "home_actions")
           .maybeSingle<HomeActionsSetting>(),
+        probeEspnLeague(),
       ])
     : [
         { data: [] as ManagedAnnouncement[] },
@@ -150,6 +160,7 @@ export default async function AdminPage() {
         { data: [] as FeedProposal[] },
         { data: [] as VoteRow[] },
         { data: null as HomeActionsSetting | null },
+        null as EspnProbeResult | null,
       ];
 
   const memberIds = uniqueStrings([
@@ -240,7 +251,7 @@ export default async function AdminPage() {
               </section>
             ) : null}
 
-            <SystemSafetyPanel systemInfo={systemInfo} />
+            <SystemSafetyPanel espnProbe={espnProbe} systemInfo={systemInfo} />
 
             <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm">
               <div className="flex items-center gap-3">
@@ -352,8 +363,10 @@ function getSupabaseProjectRef(url: string) {
 }
 
 function SystemSafetyPanel({
+  espnProbe,
   systemInfo,
 }: {
+  espnProbe: EspnProbeResult | null;
   systemInfo: ReturnType<typeof getSystemInfo>;
 }) {
   const exports = [
@@ -412,6 +425,51 @@ function SystemSafetyPanel({
             </Link>
           ))}
         </div>
+      </div>
+
+      <div className="mt-5 border-t border-[#e1e5d9] pt-4">
+        <p className="text-sm font-semibold text-[#293421]">ESPN connector probe</p>
+        {!espnProbe?.configured ? (
+          <p className="mt-2 rounded-[8px] bg-amber-50 p-3 text-sm leading-6 text-amber-900">
+            ESPN env is not fully configured
+            {espnProbe?.missing.length ? `: ${espnProbe.missing.join(", ")}` : "."}
+          </p>
+        ) : (
+          <div className="mt-2 grid gap-2">
+            <p className="text-sm leading-6 text-[#626b59]">
+              League ID {espnProbe.leagueId}. Private ESPN credentials are loaded server-side only.
+            </p>
+            {espnProbe.seasons.map((season) => (
+              <article
+                className="rounded-[8px] border border-[#e1e5d9] bg-[#fbfcf8] p-3 text-sm"
+                key={season.season}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold text-[#293421]">{season.season}</p>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      season.error ? "bg-red-50 text-red-800" : "bg-[#e9eee0] text-[#3e4a36]"
+                    }`}
+                  >
+                    {season.error ? "Needs attention" : "Connected"}
+                  </span>
+                </div>
+                {season.error ? (
+                  <p className="mt-2 leading-6 text-red-800">{season.error}</p>
+                ) : (
+                  <div className="mt-2 grid gap-2 text-[#4e5a45] sm:grid-cols-3">
+                    <p>Teams: {season.teamCount ?? "unknown"}</p>
+                    <p>Matchups: {season.matchupsCount ?? "unknown"}</p>
+                    <p>Draft picks: {season.draftPickCount ?? "unknown"}</p>
+                    <p className="sm:col-span-3">
+                      Sections: {season.availableTopLevelKeys.join(", ") || "none reported"}
+                    </p>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
