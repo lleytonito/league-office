@@ -3,7 +3,7 @@ import { MemberAvatar } from "@/components/members/member-avatar";
 import { ProfileForm } from "@/components/members/profile-form";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { AppHeader } from "@/components/layout/app-header";
-import { type MemberBadge } from "@/lib/members/badges";
+import { attachBadgesToMember, type MemberBadge, type MemberBadgeAward } from "@/lib/members/badges";
 import { memberDisplayName } from "@/lib/members/display";
 import { createClient } from "@/lib/supabase/server";
 import { ArrowLeft, Eye, Trophy, UserRound } from "lucide-react";
@@ -26,15 +26,23 @@ export default async function ProfilePage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { data: member } = user
+  const { data: baseMember, error: memberError } = user
     ? await supabase
         .from("league_members")
-        .select(
-          "id, display_name, team_name, profile_bio, avatar_color, is_member, is_admin, revoked_at, badges:member_badges(quantity, badge:badge_definitions(slug, name, description, icon_key, color))",
-        )
+        .select("id, display_name, team_name, profile_bio, avatar_color, is_member, is_admin, revoked_at")
         .eq("auth_user_id", user.id)
-        .maybeSingle<Member>()
-    : { data: null };
+        .maybeSingle<Omit<Member, "badges">>()
+    : { data: null, error: null };
+  const { data: badgeAwards } = baseMember
+    ? await supabase
+        .from("member_badges")
+        .select("member_id, quantity, badge:badge_definitions(slug, name, description, icon_key, color)")
+        .eq("member_id", baseMember.id)
+        .returns<MemberBadgeAward[]>()
+    : { data: [] as MemberBadgeAward[] };
+  const member = baseMember
+    ? attachBadgesToMember({ ...baseMember, badges: [] as MemberBadge[] }, badgeAwards)
+    : null;
 
   const canEdit = Boolean(member?.is_member && !member.revoked_at);
 
@@ -50,7 +58,11 @@ export default async function ProfilePage() {
         <div className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm">
           <UserRound className="text-[#587246]" size={24} aria-hidden="true" />
           <h1 className="mt-4 text-2xl font-semibold">Your profile</h1>
-          {member ? (
+          {memberError ? (
+            <p className="mt-4 rounded-[10px] border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-800">
+              Profile could not load: {memberError.message}
+            </p>
+          ) : member ? (
             <div className="mt-5 grid gap-5">
               <div className="flex items-center gap-3 rounded-[10px] bg-[#fbfcf8] p-4">
                 <MemberAvatar color={member.avatar_color} name={memberDisplayName(member)} />

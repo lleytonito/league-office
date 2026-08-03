@@ -2,7 +2,7 @@ import { BadgePill } from "@/components/members/badge-pill";
 import { MemberAvatar } from "@/components/members/member-avatar";
 import { LoginWall } from "@/components/auth/login-wall";
 import { AppHeader } from "@/components/layout/app-header";
-import { type MemberBadge } from "@/lib/members/badges";
+import { attachBadgesToMember, type MemberBadge, type MemberBadgeAward } from "@/lib/members/badges";
 import { memberDisplayName, memberSubtitle } from "@/lib/members/display";
 import { createClient } from "@/lib/supabase/server";
 import { ArrowLeft, Shield, Trophy } from "lucide-react";
@@ -39,7 +39,7 @@ export default async function MemberProfilePage({
     return <LoginWall />;
   }
 
-  const [{ data: currentMember }, { data: member }] = await Promise.all([
+  const [{ data: currentMember }, { data: baseMember }] = await Promise.all([
     supabase
       .from("league_members")
       .select("display_name, team_name, is_member, is_admin, revoked_at")
@@ -47,17 +47,21 @@ export default async function MemberProfilePage({
       .maybeSingle<HeaderMember>(),
     supabase
       .from("league_members")
-      .select(
-        "id, display_name, team_name, profile_bio, avatar_color, is_member, is_admin, revoked_at, badges:member_badges(quantity, badge:badge_definitions(slug, name, description, icon_key, color))",
-      )
+      .select("id, display_name, team_name, profile_bio, avatar_color, is_member, is_admin, revoked_at")
       .eq("id", memberId)
-      .maybeSingle<ProfileMember>(),
+      .maybeSingle<Omit<ProfileMember, "badges">>(),
   ]);
 
-  if (!member) {
+  if (!baseMember) {
     notFound();
   }
 
+  const { data: badgeAwards } = await supabase
+    .from("member_badges")
+    .select("member_id, quantity, badge:badge_definitions(slug, name, description, icon_key, color)")
+    .eq("member_id", baseMember.id)
+    .returns<MemberBadgeAward[]>();
+  const member = attachBadgesToMember({ ...baseMember, badges: [] as MemberBadge[] }, badgeAwards);
   const displayName = memberDisplayName(member);
 
   return (

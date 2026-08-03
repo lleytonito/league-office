@@ -8,7 +8,13 @@ import { AppHeader } from "@/components/layout/app-header";
 import { BadgePill } from "@/components/members/badge-pill";
 import { MemberIdentity } from "@/components/members/member-identity";
 import { ProposalFeedCard, type FeedProposal } from "@/components/proposals/proposal-feed-card";
-import { championBadge, type MemberBadge } from "@/lib/members/badges";
+import {
+  attachBadgesToMembers,
+  badgesForMember,
+  championBadge,
+  type MemberBadge,
+  type MemberBadgeAward,
+} from "@/lib/members/badges";
 import { canManageMember, getMemberStatusLabel } from "@/lib/members/status";
 import { createClient } from "@/lib/supabase/server";
 import { ArrowLeft, Crown, Megaphone, ShieldAlert } from "lucide-react";
@@ -99,20 +105,20 @@ export default async function AdminPage() {
         supabase
           .from("proposals")
           .select(
-            "id, title, summary, rationale, created_at, author:league_members!proposals_author_member_id_fkey(id, display_name, team_name, avatar_color, badges:member_badges(quantity, badge:badge_definitions(slug, name, description, icon_key, color))), options:proposal_vote_options(id, label, sort_order)",
+            "id, title, summary, rationale, created_at, author:league_members!proposals_author_member_id_fkey(id, display_name, team_name, avatar_color), options:proposal_vote_options(id, label, sort_order)",
           )
           .eq("status", "review")
           .order("created_at", { ascending: true })
           .returns<ReviewProposal[]>(),
         supabase
           .from("league_members")
-          .select("id, display_name, team_name, is_member, is_admin, revoked_at, created_at, updated_at, badges:member_badges(quantity, badge:badge_definitions(slug, name, description, icon_key, color))")
+          .select("id, display_name, team_name, is_member, is_admin, revoked_at, created_at, updated_at")
           .order("created_at", { ascending: true })
-          .returns<DirectoryMember[]>(),
+          .returns<Array<Omit<DirectoryMember, "badges">>>(),
         supabase
           .from("proposals")
           .select(
-            "id, title, summary, status, is_pinned, pinned_at, published_at, voting_closes_at, closed_at, passed, created_at, author:league_members!proposals_author_member_id_fkey(id, display_name, team_name, avatar_color, badges:member_badges(quantity, badge:badge_definitions(slug, name, description, icon_key, color))), options:proposal_vote_options(id, label, sort_order), window:voting_windows!voting_windows_proposal_id_fkey(starts_at, ends_at, closed_at)",
+            "id, title, summary, status, is_pinned, pinned_at, published_at, voting_closes_at, closed_at, passed, created_at, author:league_members!proposals_author_member_id_fkey(id, display_name, team_name, avatar_color), options:proposal_vote_options(id, label, sort_order), window:voting_windows!voting_windows_proposal_id_fkey(starts_at, ends_at, closed_at)",
           )
           .in("status", ["voting", "closed"])
           .order("published_at", { ascending: false })
@@ -121,7 +127,7 @@ export default async function AdminPage() {
         supabase
           .from("votes")
           .select(
-            "proposal_id, option_id, voter_member_id, voter:league_members!votes_voter_member_id_fkey(id, display_name, team_name, avatar_color, badges:member_badges(quantity, badge:badge_definitions(slug, name, description, icon_key, color)))",
+            "proposal_id, option_id, voter_member_id, voter:league_members!votes_voter_member_id_fkey(id, display_name, team_name, avatar_color)",
           )
           .returns<VoteRow[]>(),
       ])
@@ -133,17 +139,47 @@ export default async function AdminPage() {
         { data: [] as VoteRow[] },
       ];
 
+  const memberIds = uniqueStrings([
+    ...(membersResult.data ?? []).map((directoryMember) => directoryMember.id),
+    ...(reviewResult.data ?? []).map((proposal) => proposal.author?.id),
+    ...(activeResult.data ?? []).map((proposal) => proposal.author?.id),
+    ...(votesResult.data ?? []).map((vote) => vote.voter?.id),
+  ]);
+  const { data: badgeAwards } = memberIds.length
+    ? await supabase
+        .from("member_badges")
+        .select("member_id, quantity, badge:badge_definitions(slug, name, description, icon_key, color)")
+        .in("member_id", memberIds)
+        .returns<MemberBadgeAward[]>()
+    : { data: [] as MemberBadgeAward[] };
+
   const reviewQueue = (reviewResult.data ?? []).map((proposal) => ({
     ...proposal,
+    author: proposal.author
+      ? { ...proposal.author, badges: badgesForMember(badgeAwards, proposal.author.id) }
+      : null,
     options: [...proposal.options].sort((a, b) => a.sort_order - b.sort_order),
   }));
-  const members = membersResult.data ?? [];
+  const members = attachBadgesToMembers(membersResult.data, badgeAwards);
   const activeProposals = (activeResult.data ?? []).map((proposal) => ({
     ...proposal,
+    author: proposal.author
+      ? { ...proposal.author, badges: badgesForMember(badgeAwards, proposal.author.id) }
+      : null,
     options: [...proposal.options].sort((a, b) => a.sort_order - b.sort_order),
   }));
-  const votes = votesResult.data ?? [];
+  const votes = (votesResult.data ?? []).map((vote) => ({
+    ...vote,
+    voter: vote.voter ? { ...vote.voter, badges: badgesForMember(badgeAwards, vote.voter.id) } : null,
+  }));
   const announcements = announcementResult.data ?? [];
+  const queryErrorMessages = [
+    announcementResult.error,
+    reviewResult.error,
+    membersResult.error,
+    activeResult.error,
+    votesResult.error,
+  ].flatMap((error) => (error ? [error.message] : []));
 
   return (
     <main className="min-h-dvh bg-[#f7f8f4] text-[#111411]">
@@ -177,6 +213,17 @@ export default async function AdminPage() {
           </GateCard>
         ) : (
           <div className="grid gap-4">
+            {queryErrorMessages.length ? (
+              <section className="rounded-[10px] border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-800">
+                <p className="font-semibold">Some admin data could not load.</p>
+                <ul className="mt-2 list-disc pl-5">
+                  {queryErrorMessages.map((message, index) => (
+                    <li key={`${message}-${index}`}>{message}</li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
             <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm">
               <div className="flex items-center gap-3">
                 <Megaphone className="text-[#587246]" size={20} aria-hidden="true" />
@@ -250,6 +297,10 @@ export default async function AdminPage() {
       </section>
     </main>
   );
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))];
 }
 
 function GateCard({ children, title }: { children: React.ReactNode; title: string }) {

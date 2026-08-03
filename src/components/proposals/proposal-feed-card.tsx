@@ -3,6 +3,7 @@
 import {
   castVoteAction,
   closeVotingAction,
+  deleteProposalAction,
   toggleProposalPinAction,
 } from "@/app/actions/proposals";
 import { MemberAvatar } from "@/components/members/member-avatar";
@@ -16,7 +17,9 @@ import {
   Lock,
   Pin,
   PinOff,
+  Trash2,
   Vote,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -82,6 +85,7 @@ export function ProposalFeedCard({
   votes: VoteRow[];
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const proposalVotes = votes.filter((vote) => vote.proposal_id === proposal.id);
   const userVote = memberId
     ? proposalVotes.find((vote) => vote.voter_member_id === memberId)
@@ -288,16 +292,51 @@ export function ProposalFeedCard({
         </div>
       ) : null}
 
-      {showAdminControls && isAdmin && proposal.status === "voting" ? (
-        <form action={closeVotingAction} className="mt-4">
-          <input name="proposalId" type="hidden" value={proposal.id} />
-          <button
-            className="h-10 rounded-md border border-[#d9decf] bg-white px-3 text-sm font-semibold text-[#3e4a36] transition hover:bg-[#eef2e8]"
-            type="submit"
-          >
-            Close voting
-          </button>
-        </form>
+      {showAdminControls && isAdmin ? (
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          {proposal.status === "voting" ? (
+            <form action={closeVotingAction}>
+              <input name="proposalId" type="hidden" value={proposal.id} />
+              <button
+                className="h-10 w-full rounded-md border border-[#d9decf] bg-white px-3 text-sm font-semibold text-[#3e4a36] transition hover:bg-[#eef2e8]"
+                type="submit"
+              >
+                Close voting
+              </button>
+            </form>
+          ) : null}
+          <form action={deleteProposalAction} className={proposal.status === "voting" ? "" : "sm:col-span-2"}>
+            <input name="proposalId" type="hidden" value={proposal.id} />
+            {isConfirmingDelete ? (
+              <div className="grid grid-cols-2 gap-2 rounded-md border border-red-200 bg-red-50 p-2">
+                <button
+                  className="flex h-10 items-center justify-center gap-2 rounded-md border border-red-200 bg-white px-3 text-sm font-semibold text-red-700 transition hover:bg-red-100"
+                  onClick={() => setIsConfirmingDelete(false)}
+                  type="button"
+                >
+                  <X size={16} aria-hidden="true" />
+                  Cancel
+                </button>
+                <button
+                  className="flex h-10 items-center justify-center gap-2 rounded-md bg-red-700 px-3 text-sm font-semibold text-white transition hover:bg-red-800"
+                  type="submit"
+                >
+                  <Trash2 size={16} aria-hidden="true" />
+                  Delete
+                </button>
+              </div>
+            ) : (
+              <button
+                className="flex h-10 w-full items-center justify-center gap-2 rounded-md border border-red-200 bg-white px-3 text-sm font-semibold text-red-700 transition hover:bg-red-50"
+                onClick={() => setIsConfirmingDelete(true)}
+                type="button"
+              >
+                <Trash2 size={16} aria-hidden="true" />
+                Delete proposal
+              </button>
+            )}
+          </form>
+        </div>
       ) : null}
       </div>
     </article>

@@ -2,7 +2,11 @@ import { BadgePill } from "@/components/members/badge-pill";
 import { MemberAvatar } from "@/components/members/member-avatar";
 import { LoginWall } from "@/components/auth/login-wall";
 import { AppHeader } from "@/components/layout/app-header";
-import { type MemberBadge } from "@/lib/members/badges";
+import {
+  attachBadgesToMembers,
+  type MemberBadge,
+  type MemberBadgeAward,
+} from "@/lib/members/badges";
 import { memberDisplayName, memberSubtitle } from "@/lib/members/display";
 import { createClient } from "@/lib/supabase/server";
 import { ArrowLeft, ChevronRight, UsersRound } from "lucide-react";
@@ -22,6 +26,7 @@ type DirectoryMember = HeaderMember & {
   id: string;
   profile_bio: string | null;
 };
+type BaseDirectoryMember = Omit<DirectoryMember, "badges">;
 
 export default async function MembersPage() {
   const supabase = await createClient();
@@ -33,7 +38,7 @@ export default async function MembersPage() {
     return <LoginWall />;
   }
 
-  const [{ data: currentMember }, { data: members }] = await Promise.all([
+  const [{ data: currentMember }, { data: baseMembers, error: membersError }] = await Promise.all([
     supabase
       .from("league_members")
       .select("display_name, team_name, is_member, is_admin, revoked_at")
@@ -41,15 +46,22 @@ export default async function MembersPage() {
       .maybeSingle<HeaderMember>(),
     supabase
       .from("league_members")
-      .select(
-        "id, display_name, team_name, profile_bio, avatar_color, is_member, is_admin, revoked_at, badges:member_badges(quantity, badge:badge_definitions(slug, name, description, icon_key, color))",
-      )
+      .select("id, display_name, team_name, profile_bio, avatar_color, is_member, is_admin, revoked_at")
       .eq("is_member", true)
       .is("revoked_at", null)
       .order("team_name", { ascending: true, nullsFirst: false })
       .order("display_name", { ascending: true })
-      .returns<DirectoryMember[]>(),
+      .returns<BaseDirectoryMember[]>(),
   ]);
+  const memberIds = (baseMembers ?? []).map((member) => member.id);
+  const { data: badgeAwards } = memberIds.length
+    ? await supabase
+        .from("member_badges")
+        .select("member_id, quantity, badge:badge_definitions(slug, name, description, icon_key, color)")
+        .in("member_id", memberIds)
+        .returns<MemberBadgeAward[]>()
+    : { data: [] as MemberBadgeAward[] };
+  const members = attachBadgesToMembers(baseMembers, badgeAwards);
 
   return (
     <main className="min-h-dvh bg-[#f7f8f4] text-[#111411]">
@@ -70,8 +82,13 @@ export default async function MembersPage() {
           </div>
         </header>
 
+        {membersError ? (
+          <p className="rounded-[10px] border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-800">
+            Members could not load: {membersError.message}
+          </p>
+        ) : (
         <div className="grid gap-3">
-          {(members ?? []).map((member) => (
+          {members.map((member) => (
             <Link
               className="group rounded-[10px] border border-[#d9decf] bg-white p-4 shadow-sm transition hover:border-[#b9c7ad] hover:bg-[#fbfcf8]"
               href={`/members/${member.id}`}
@@ -104,6 +121,7 @@ export default async function MembersPage() {
             </Link>
           ))}
         </div>
+        )}
       </section>
     </main>
   );

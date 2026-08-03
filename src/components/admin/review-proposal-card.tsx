@@ -2,12 +2,13 @@
 
 import {
   approveProposalAction,
+  deleteProposalAction,
   rejectProposalAction,
   type ProposalActionState,
 } from "@/app/actions/proposals";
 import { MemberIdentity, type IdentityMember } from "@/components/members/member-identity";
 import { ActionFeedback } from "@/components/proposals/action-feedback";
-import { Check, Plus, Trash2, X } from "lucide-react";
+import { AlertTriangle, Check, Plus, Trash2, X } from "lucide-react";
 import { useActionState, useMemo, useState } from "react";
 
 type ReviewProposal = {
@@ -34,6 +35,7 @@ const initialState: ProposalActionState = { message: "", ok: false };
 
 export function ReviewProposalCard({ proposal }: { proposal: ReviewProposal }) {
   const [state, formAction, pending] = useActionState(approveProposalAction, initialState);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [options, setOptions] = useState(
     proposal.options.length ? proposal.options.map((option) => option.label) : ["Yes", "No"],
   );
@@ -131,7 +133,7 @@ export function ReviewProposalCard({ proposal }: { proposal: ReviewProposal }) {
 
         <ActionFeedback state={state} />
 
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-3">
           <button
             className="flex h-11 items-center justify-center gap-2 rounded-md bg-[#183a2b] px-4 text-sm font-semibold text-white transition hover:bg-[#26523e] disabled:opacity-60"
             disabled={pending}
@@ -149,6 +151,43 @@ export function ReviewProposalCard({ proposal }: { proposal: ReviewProposal }) {
             <Trash2 size={17} aria-hidden="true" />
             Reject
           </button>
+          {isConfirmingDelete ? (
+            <div className="rounded-md border border-red-200 bg-red-50 p-2 sm:col-span-1">
+              <p className="flex items-center gap-2 text-sm font-semibold text-red-800">
+                <AlertTriangle size={16} aria-hidden="true" />
+                Delete?
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  className="flex h-10 items-center justify-center rounded-md border border-red-200 bg-white text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+                  disabled={pending}
+                  onClick={() => setIsConfirmingDelete(false)}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button
+                  className="flex h-10 items-center justify-center gap-2 rounded-md bg-red-700 px-3 text-sm font-semibold text-white transition hover:bg-red-800 disabled:opacity-60"
+                  disabled={pending}
+                  formAction={deleteProposalAction}
+                  type="submit"
+                >
+                  <Trash2 size={16} aria-hidden="true" />
+                  Delete
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              className="flex h-11 items-center justify-center gap-2 rounded-md border border-red-200 bg-white px-4 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+              disabled={pending}
+              onClick={() => setIsConfirmingDelete(true)}
+              type="button"
+            >
+              <Trash2 size={17} aria-hidden="true" />
+              Delete
+            </button>
+          )}
         </div>
       </form>
     </article>

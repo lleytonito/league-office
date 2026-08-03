@@ -11,6 +11,43 @@ export type MemberBadge = {
   badge: BadgeDefinition | null;
 };
 
+export type MemberBadgeAward = MemberBadge & {
+  member_id: string;
+};
+
+export type BadgeableMember = {
+  badges?: MemberBadge[] | null;
+  id: string;
+};
+
+export function badgesForMember(
+  awards: MemberBadgeAward[] | null | undefined,
+  memberId: string | null | undefined,
+) {
+  if (!memberId) {
+    return [];
+  }
+
+  return (awards ?? []).filter((award) => award.member_id === memberId);
+}
+
+export function attachBadgesToMember<T extends BadgeableMember>(
+  member: T,
+  awards: MemberBadgeAward[] | null | undefined,
+) {
+  return {
+    ...member,
+    badges: badgesForMember(awards, member.id),
+  };
+}
+
+export function attachBadgesToMembers<T extends BadgeableMember>(
+  members: T[] | null | undefined,
+  awards: MemberBadgeAward[] | null | undefined,
+) {
+  return (members ?? []).map((member) => attachBadgesToMember(member, awards));
+}
+
 export function hasChampionBadge(badges: MemberBadge[] | null | undefined) {
   return Boolean(championBadge(badges));
 }

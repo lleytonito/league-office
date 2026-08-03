@@ -1,6 +1,6 @@
 import { AppHeader } from "@/components/layout/app-header";
 import { ProposalFeedCard, type FeedProposal } from "@/components/proposals/proposal-feed-card";
-import { type MemberBadge } from "@/lib/members/badges";
+import { badgesForMember, type MemberBadge, type MemberBadgeAward } from "@/lib/members/badges";
 import { createClient } from "@/lib/supabase/server";
 import { Megaphone, Plus } from "lucide-react";
 import Link from "next/link";
@@ -38,7 +38,7 @@ type VoteRow = {
 };
 
 const signedInProposalSelect =
-  "id, title, summary, status, is_pinned, pinned_at, published_at, voting_closes_at, closed_at, passed, created_at, author:league_members!proposals_author_member_id_fkey(id, display_name, team_name, avatar_color, badges:member_badges(quantity, badge:badge_definitions(slug, name, description, icon_key, color))), options:proposal_vote_options(id, label, sort_order), window:voting_windows!voting_windows_proposal_id_fkey(starts_at, ends_at, closed_at)";
+  "id, title, summary, status, is_pinned, pinned_at, published_at, voting_closes_at, closed_at, passed, created_at, author:league_members!proposals_author_member_id_fkey(id, display_name, team_name, avatar_color), options:proposal_vote_options(id, label, sort_order), window:voting_windows!voting_windows_proposal_id_fkey(starts_at, ends_at, closed_at)";
 
 const publicProposalSelect =
   "id, title, summary, status, is_pinned, pinned_at, published_at, voting_closes_at, closed_at, passed, created_at, options:proposal_vote_options(id, label, sort_order), window:voting_windows!voting_windows_proposal_id_fkey(starts_at, ends_at, closed_at)";
@@ -84,19 +84,35 @@ export default async function Home() {
       ? supabase
           .from("votes")
           .select(
-            "proposal_id, option_id, voter_member_id, voter:league_members!votes_voter_member_id_fkey(id, display_name, team_name, avatar_color, badges:member_badges(quantity, badge:badge_definitions(slug, name, description, icon_key, color)))",
+            "proposal_id, option_id, voter_member_id, voter:league_members!votes_voter_member_id_fkey(id, display_name, team_name, avatar_color)",
           )
           .returns<VoteRow[]>()
       : Promise.resolve({ data: [] as VoteRow[] }),
   ]);
 
   const announcements = announcementsResult.data ?? [];
+  const badgeMemberIds = uniqueStrings([
+    ...(proposalsResult.data ?? []).map((proposal) => proposal.author?.id),
+    ...(votesResult.data ?? []).map((vote) => vote.voter?.id),
+  ]);
+  const { data: badgeAwards } = member && badgeMemberIds.length
+    ? await supabase
+        .from("member_badges")
+        .select("member_id, quantity, badge:badge_definitions(slug, name, description, icon_key, color)")
+        .in("member_id", badgeMemberIds)
+        .returns<MemberBadgeAward[]>()
+    : { data: [] as MemberBadgeAward[] };
   const proposals = (proposalsResult.data ?? []).map((proposal) => ({
     ...proposal,
-    author: proposal.author ?? null,
+    author: proposal.author
+      ? { ...proposal.author, badges: badgesForMember(badgeAwards, proposal.author.id) }
+      : null,
     options: [...proposal.options].sort((a, b) => a.sort_order - b.sort_order),
   }));
-  const votes = votesResult.data ?? [];
+  const votes = (votesResult.data ?? []).map((vote) => ({
+    ...vote,
+    voter: vote.voter ? { ...vote.voter, badges: badgesForMember(badgeAwards, vote.voter.id) } : null,
+  }));
 
   return (
     <main className="min-h-dvh bg-[#f7f8f4] text-[#111411]">
@@ -161,6 +177,10 @@ export default async function Home() {
       </section>
     </main>
   );
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))];
 }
 
 function isOriginalWelcomePost(announcement: FeedAnnouncement) {

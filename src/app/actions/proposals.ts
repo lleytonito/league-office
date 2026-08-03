@@ -310,6 +310,21 @@ export async function rejectProposalAction(formData: FormData) {
   revalidatePath("/admin");
 }
 
+export async function deleteProposalAction(formData: FormData) {
+  const supabase = await createClient();
+  const member = await getCurrentMember(supabase);
+  const proposalId = stringValue(formData.get("proposalId"));
+
+  if (!member?.isAdmin || !proposalId) {
+    return;
+  }
+
+  await supabase.from("proposals").delete().eq("id", proposalId);
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+}
+
 export async function closeVotingAction(formData: FormData) {
   const supabase = await createClient();
   const member = await getCurrentMember(supabase);
