@@ -170,7 +170,7 @@ export default async function Home() {
               <p className="mt-2 text-sm leading-6 text-[#626b59]">
                 Once proposals are approved or posts are pinned, they will show up here.
               </p>
-              {showHomeActions ? (
+              {!showHomeActions ? (
                 <Link
                   className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#183a2b] px-4 text-sm font-semibold text-white transition hover:bg-[#26523e]"
                   href="/submit"
