@@ -34,5 +34,6 @@ CLI status:
 
 - `supabase/config.toml` has been initialized.
 - The local CLI is linked to project ref `lqduwieteamxlbnsjyxb`.
-- Linked SQL queries and advisors work without Docker.
-- `supabase db pull` and `supabase db dump` are blocked until Docker Desktop is installed because the CLI uses Docker for those workflows.
+- Docker Desktop is installed and WSL2 is active.
+- Linked SQL queries, advisors, and `supabase db pull` work.
+- Remote migration history is aligned with local files through `20260803163954`.

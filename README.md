@@ -50,13 +50,13 @@ npx supabase db query --linked "select count(*) from public.league_members;"
 npx supabase db advisors --linked
 ```
 
-Docker Desktop is still required for CLI schema diff/dump workflows:
+Docker Desktop is installed and the official CLI schema pull has been verified:
 
 ```bash
 npx supabase db pull verify_remote_schema --linked --schema public,app_private
 ```
 
-The committed migration was created from catalog inspection through the authenticated Supabase connector. Use `db pull` as a verification artifact once Docker Desktop is available.
+The initial migration was created from catalog inspection through the authenticated Supabase connector. Follow-up `verify_remote_schema` migrations capture Supabase-managed function formatting and default grants discovered by the CLI diff engine.
 
 ## Verification
 
