@@ -37,3 +37,10 @@ test("gates the member directory behind Google sign-in", async ({ page }) => {
   await expect(page.getByText(/league business, handled cleanly/i)).toBeVisible();
   await expect(page.getByRole("button", { name: /continue with google/i })).toBeVisible();
 });
+
+test("gates admin CSV exports behind sign-in", async ({ request }) => {
+  const response = await request.get("/admin/exports/members");
+
+  expect(response.status()).toBe(401);
+  expect(response.headers()["content-type"]).toContain("application/json");
+});

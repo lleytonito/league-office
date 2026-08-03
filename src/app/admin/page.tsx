@@ -18,7 +18,7 @@ import {
 } from "@/lib/members/badges";
 import { canManageMember, getMemberStatusLabel } from "@/lib/members/status";
 import { createClient } from "@/lib/supabase/server";
-import { ArrowLeft, Crown, Megaphone, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Crown, Database, Download, GitBranch, Megaphone, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 
 type Member = {
@@ -187,6 +187,7 @@ export default async function AdminPage() {
   }));
   const announcements = announcementResult.data ?? [];
   const homeActionsVisible = homeActionsResult.data?.value?.visible ?? true;
+  const systemInfo = getSystemInfo();
   const queryErrorMessages = [
     announcementResult.error,
     reviewResult.error,
@@ -238,6 +239,8 @@ export default async function AdminPage() {
                 </ul>
               </section>
             ) : null}
+
+            <SystemSafetyPanel systemInfo={systemInfo} />
 
             <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm">
               <div className="flex items-center gap-3">
@@ -321,6 +324,96 @@ export default async function AdminPage() {
         )}
       </section>
     </main>
+  );
+}
+
+function getSystemInfo() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const context = process.env.CONTEXT ?? "local";
+  const branch = process.env.BRANCH ?? (context === "local" ? "local" : "unknown");
+  const commit = process.env.COMMIT_REF?.slice(0, 7) ?? "local";
+  const supabaseProjectRef = getSupabaseProjectRef(supabaseUrl);
+
+  return {
+    branch,
+    commit,
+    context,
+    isProduction: context === "production",
+    supabaseProjectRef,
+  };
+}
+
+function getSupabaseProjectRef(url: string) {
+  try {
+    return new URL(url).hostname.split(".")[0] || "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+function SystemSafetyPanel({
+  systemInfo,
+}: {
+  systemInfo: ReturnType<typeof getSystemInfo>;
+}) {
+  const exports = [
+    { href: "/admin/exports/members", label: "Members" },
+    { href: "/admin/exports/proposals", label: "Proposals" },
+    { href: "/admin/exports/votes", label: "Votes" },
+    { href: "/admin/exports/badges", label: "Badges" },
+    { href: "/admin/exports/announcements", label: "Posts" },
+  ];
+
+  return (
+    <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Database className="text-[#587246]" size={19} aria-hidden="true" />
+          <h1 className="text-2xl font-semibold">System safety</h1>
+        </div>
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] ${
+            systemInfo.isProduction ? "bg-[#183a2b] text-white" : "bg-amber-50 text-amber-800"
+          }`}
+        >
+          {systemInfo.context}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-2 text-sm text-[#4e5a45] sm:grid-cols-3">
+        <div className="rounded-[8px] bg-[#f7f8f4] p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#6a725f]">Supabase</p>
+          <p className="mt-1 font-semibold text-[#293421]">{systemInfo.supabaseProjectRef}</p>
+        </div>
+        <div className="rounded-[8px] bg-[#f7f8f4] p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#6a725f]">Branch</p>
+          <p className="mt-1 inline-flex items-center gap-1.5 font-semibold text-[#293421]">
+            <GitBranch size={14} aria-hidden="true" />
+            {systemInfo.branch}
+          </p>
+        </div>
+        <div className="rounded-[8px] bg-[#f7f8f4] p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#6a725f]">Commit</p>
+          <p className="mt-1 font-semibold text-[#293421]">{systemInfo.commit}</p>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <p className="text-sm font-semibold text-[#293421]">CSV exports</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {exports.map((item) => (
+            <Link
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#d9decf] bg-[#fbfcf8] px-3 text-sm font-semibold text-[#3e4a36] transition hover:bg-[#eef2e8]"
+              href={item.href}
+              key={item.href}
+            >
+              <Download size={15} aria-hidden="true" />
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
