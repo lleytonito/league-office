@@ -4,6 +4,7 @@ import {
   castVoteAction,
   closeVotingAction,
   deleteProposalAction,
+  type ProposalActionState,
   toggleProposalPinAction,
 } from "@/app/actions/proposals";
 import { MemberAvatar } from "@/components/members/member-avatar";
@@ -16,6 +17,7 @@ import {
   ChevronDown,
   Clock,
   Lock,
+  Loader2,
   Pin,
   PinOff,
   Trash2,
@@ -70,6 +72,9 @@ type VoteRow = {
   } | null;
 };
 
+const voteRequestTimeoutMs = 15000;
+const voteTimeoutMessage = "Voting is taking longer than expected. Refresh before trying again.";
+
 export function ProposalFeedCard({
   isAdmin,
   isMemberActive,
@@ -90,6 +95,8 @@ export function ProposalFeedCard({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [optimisticOptionId, setOptimisticOptionId] = useState<string | null>(null);
+  const [submittingOptionId, setSubmittingOptionId] = useState<string | null>(null);
+  const [voteState, setVoteState] = useState<ProposalActionState>({ message: "", ok: false });
   const proposalVotes = votes.filter((vote) => vote.proposal_id === proposal.id);
   const userVote = memberId
     ? proposalVotes.find((vote) => vote.voter_member_id === memberId)
@@ -235,8 +242,24 @@ export function ProposalFeedCard({
           return (
             <form
               action={async (formData) => {
+                setVoteState({ message: "", ok: false });
+                setSubmittingOptionId(option.id);
                 setOptimisticOptionId(option.id);
-                await castVoteAction(formData);
+                try {
+                  const result = await withVoteTimeout(castVoteAction(formData));
+                  setVoteState(result);
+                  if (!result.ok) {
+                    setOptimisticOptionId(null);
+                  }
+                } catch {
+                  setOptimisticOptionId(null);
+                  setVoteState({
+                    message: "Your vote could not be recorded. Refresh and try again.",
+                    ok: false,
+                  });
+                } finally {
+                  setSubmittingOptionId(null);
+                }
               }}
               key={option.id}
             >
@@ -259,10 +282,14 @@ export function ProposalFeedCard({
                 <span className="min-w-0">
                   <span className="block truncate">{option.label}</span>
                   {votePending ? (
-                    <span className="mt-0.5 block text-xs font-semibold text-[#587246]">Recording vote...</span>
+                    <span className="mt-0.5 block text-xs font-semibold text-[#587246]">
+                      Recording vote...
+                    </span>
                   ) : null}
                 </span>
-                {selected ? (
+                {votePending ? (
+                  <Loader2 className="shrink-0 animate-spin text-[#587246]" size={18} aria-hidden="true" />
+                ) : selected ? (
                   <CheckCircle2 className="shrink-0 text-[#587246]" size={18} aria-hidden="true" />
                 ) : canVote ? (
                   <Vote className="shrink-0 text-[#587246]" size={17} aria-hidden="true" />
@@ -275,6 +302,19 @@ export function ProposalFeedCard({
         })}
       </div>
 
+      {voteState.message && (!voteState.ok || !canSeeResults) ? (
+        <p
+          aria-live="polite"
+          className={`mt-4 rounded-md border px-3 py-2 text-sm ${
+            voteState.ok
+              ? "border-[#c9d8b8] bg-[#f2f7ed] text-[#2f4b2f]"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {voteState.message}
+        </p>
+      ) : null}
+
       {!memberId ? (
         <p className="mt-4 rounded-md bg-[#f4f0e7] px-3 py-2 text-sm leading-6 text-[#6c5136]">
           Sign in to vote or submit a proposal.
@@ -282,7 +322,11 @@ export function ProposalFeedCard({
       ) : !canSeeResults && userVote ? null : !canSeeResults ? (
         <p className="mt-4 flex items-center gap-2 text-sm text-[#6a725f]">
           <BarChart3 size={16} aria-hidden="true" />
-          {pendingVoteOptionId ? "Saving your vote..." : "Results unlock after you vote."}
+          {submittingOptionId
+            ? "Saving your vote..."
+            : voteState.ok
+              ? "Vote recorded. Results are loading..."
+              : "Results unlock after you vote."}
         </p>
       ) : proposal.status === "closed" ? (
         <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-[#293421]">
@@ -391,4 +435,25 @@ function formatShortDate(value: string | null | undefined) {
     month: "short",
     timeZone: "America/Los_Angeles",
   }).format(new Date(value));
+}
+
+function withVoteTimeout(action: Promise<ProposalActionState>) {
+  return new Promise<ProposalActionState>((resolve) => {
+    const timeout = window.setTimeout(() => {
+      resolve({ message: voteTimeoutMessage, ok: false });
+    }, voteRequestTimeoutMs);
+
+    action
+      .then((result) => {
+        window.clearTimeout(timeout);
+        resolve(result);
+      })
+      .catch(() => {
+        window.clearTimeout(timeout);
+        resolve({
+          message: "Your vote could not be recorded. Refresh and try again.",
+          ok: false,
+        });
+      });
+  });
 }
