@@ -66,7 +66,6 @@ export async function refreshEspnAnalyticsAction(
   const completed: number[] = [];
   const errors: string[] = [];
   const normalizedTeams = [];
-  const normalizedMatchups = [];
   let seasons: number[] = [];
 
   try {
@@ -88,7 +87,12 @@ export async function refreshEspnAnalyticsAction(
         {
           fetched_at: new Date().toISOString(),
           league_id: espnEnv.leagueId,
-          raw: seasonData,
+          raw: {
+            draftPicks: seasonData.draftDetail?.picks?.length ?? null,
+            leagueName: seasonData.settings?.name ?? null,
+            matchups: seasonData.schedule?.length ?? null,
+            teams: seasonData.teams?.length ?? null,
+          },
           season,
           status: "ok",
           sync_run_id: syncRunId,
@@ -146,7 +150,6 @@ export async function refreshEspnAnalyticsAction(
       }
 
       normalizedTeams.push(...seasonTeams.filter((team) => completedSeasonCandidates.includes(team.season)));
-      normalizedMatchups.push(...seasonMatchups);
       completed.push(season);
     } catch (error) {
       errors.push(`${season}: ${errorMessage(error)}`);
@@ -175,9 +178,12 @@ export async function refreshEspnAnalyticsAction(
       metric_key: "all-time-rankings",
       payload: {
         formula: {
+          baselineAverage: 6.5,
           championshipBonus: 3,
           placement: "season team count - final rank + 1",
+          priorSeasons: 2,
           runnerUpBonus: 1,
+          score: "(totalPoints + baselineAverage * priorSeasons) / (seasonsPlayed + priorSeasons)",
         },
         rankings: allTimeRanking,
         seasonsCompleted: completed.filter((season) => completedSeasonCandidates.includes(season)),

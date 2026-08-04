@@ -10,7 +10,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "e2e": "playwright test",
-    "e2e:mobile": "powershell -ExecutionPolicy Bypass -File ./scripts/e2e-mobile.ps1"
+    "e2e:mobile": "powershell -ExecutionPolicy Bypass -File ./scripts/e2e-mobile.ps1",
+    "espn:refresh:dev": "node scripts/refresh-espn-dev.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
