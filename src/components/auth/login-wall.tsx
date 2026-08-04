@@ -21,23 +21,17 @@ export function LoginWall() {
         <div className="grid gap-8 py-14 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
           <div className="space-y-6">
             <h1 className="max-w-2xl text-5xl font-semibold leading-[0.98] tracking-normal text-[#11130f] sm:text-6xl">
-              League business, handled cleanly.
+              League Office.
             </h1>
             <p className="max-w-xl text-lg leading-8 text-[#596153]">
-              Sign in to review proposals, cast votes, and keep every rule
-              change tied to a league member.
+              Sign in to view the feed, vote on proposals, and check league history.
             </p>
           </div>
 
           <div className="rounded-lg border border-[#d9decf] bg-white p-5 shadow-sm">
             <h2 className="text-2xl font-semibold">Sign in</h2>
-            <p className="mt-2 text-sm leading-6 text-[#596153]">
-              Google login creates your member profile automatically. The
-              commissioner can revoke access if someone outside the league gets
-              in.
-            </p>
 
-            <GoogleSignInButton className="mt-6 flex h-12 w-full items-center justify-center gap-3 rounded-md bg-[#182214] px-4 text-sm font-semibold text-white transition hover:bg-[#26351f] disabled:cursor-not-allowed disabled:opacity-70" />
+            <GoogleSignInButton className="mt-4 flex h-12 w-full items-center justify-center gap-3 rounded-md bg-[#182214] px-4 text-sm font-semibold text-white transition hover:bg-[#26351f] disabled:cursor-not-allowed disabled:opacity-70" />
           </div>
         </div>
       </section>

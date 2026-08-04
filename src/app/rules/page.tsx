@@ -1,3 +1,4 @@
+import { LoginWall } from "@/components/auth/login-wall";
 import { AppHeader } from "@/components/layout/app-header";
 import {
   basicSettings,
@@ -27,6 +28,10 @@ export default async function RulesPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (!user) {
+    return <LoginWall />;
+  }
 
   const { data: member } = user
     ? await supabase

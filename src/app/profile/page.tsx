@@ -1,7 +1,7 @@
 import { BadgePill } from "@/components/members/badge-pill";
 import { MemberAvatar } from "@/components/members/member-avatar";
 import { ProfileForm } from "@/components/members/profile-form";
-import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { LoginWall } from "@/components/auth/login-wall";
 import { AppHeader } from "@/components/layout/app-header";
 import { SeasonFinishes } from "@/components/teams/season-finishes";
 import { TeamEraCard } from "@/components/teams/team-era-card";
@@ -57,6 +57,11 @@ export default async function ProfilePage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (!user) {
+    return <LoginWall />;
+  }
+
   const { data: baseMember, error: memberError } = user
     ? await supabase
         .from("league_members")
@@ -210,13 +215,8 @@ export default async function ProfilePage() {
           ) : (
             <div className="mt-4">
               <p className="text-sm leading-6 text-[#626b59]">
-                Sign in to view and edit your league profile.
+                Your league profile is still being created. Try refreshing in a moment.
               </p>
-              <GoogleSignInButton
-                className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#183a2b] px-4 text-sm font-semibold text-white transition hover:bg-[#26523e] disabled:opacity-60"
-                label="Sign in with Google"
-                shortLabel="Sign in"
-              />
             </div>
           )}
         </div>

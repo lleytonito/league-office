@@ -1,4 +1,5 @@
 import { AppHeader } from "@/components/layout/app-header";
+import { LoginWall } from "@/components/auth/login-wall";
 import { HomeActionPanel } from "@/components/feed/home-action-panel";
 import { LeagueHistoryPanel } from "@/components/feed/league-history-panel";
 import { TeamLinkPrompt } from "@/components/feed/team-link-prompt";
@@ -72,6 +73,10 @@ export default async function Home() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (!user) {
+    return <LoginWall />;
+  }
 
   const { data: member } = user
     ? await supabase

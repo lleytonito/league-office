@@ -5,7 +5,7 @@ import { ManageAnnouncementCard } from "@/components/admin/manage-announcement-c
 import { MemberAccessForm } from "@/components/admin/member-access-form";
 import { MemberProfileAdminForm } from "@/components/admin/member-profile-admin-form";
 import { ReviewProposalCard } from "@/components/admin/review-proposal-card";
-import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { LoginWall } from "@/components/auth/login-wall";
 import { AppHeader } from "@/components/layout/app-header";
 import { BadgePill } from "@/components/members/badge-pill";
 import { MemberIdentity } from "@/components/members/member-identity";
@@ -121,6 +121,10 @@ export default async function AdminPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (!user) {
+    return <LoginWall />;
+  }
 
   const { data: member } = user
     ? await supabase
@@ -287,18 +291,7 @@ export default async function AdminPage() {
           Feed
         </Link>
 
-        {!user ? (
-          <GateCard title="Admin sign-in required">
-            <p className="text-sm leading-6 text-[#626b59]">
-              Sign in with the commissioner account to manage posts, proposals, and members.
-            </p>
-            <GoogleSignInButton
-              className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#183a2b] px-4 text-sm font-semibold text-white transition hover:bg-[#26523e] disabled:opacity-60"
-              label="Sign in with Google"
-              shortLabel="Sign in"
-            />
-          </GateCard>
-        ) : !isAdmin ? (
+        {!isAdmin ? (
           <GateCard title="Commissioner access only">
             <div className="flex gap-3 text-amber-900">
               <ShieldAlert className="mt-0.5 shrink-0" size={20} aria-hidden="true" />

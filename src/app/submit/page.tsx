@@ -1,4 +1,4 @@
-import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { LoginWall } from "@/components/auth/login-wall";
 import { AppHeader } from "@/components/layout/app-header";
 import { SubmitProposalForm } from "@/components/proposals/submit-proposal-form";
 import { createClient } from "@/lib/supabase/server";
@@ -19,6 +19,10 @@ export default async function SubmitPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (!user) {
+    return <LoginWall />;
+  }
 
   const { data: member } = user
     ? await supabase
@@ -51,18 +55,7 @@ export default async function SubmitPage() {
             </div>
           </div>
 
-          {!user ? (
-            <div className="mt-5 rounded-[10px] border border-[#d9decf] bg-[#fbfcf8] p-4">
-              <p className="text-sm leading-6 text-[#626b59]">
-                Sign in to submit a league proposal for commissioner review.
-              </p>
-              <GoogleSignInButton
-                className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#183a2b] px-4 text-sm font-semibold text-white transition hover:bg-[#26523e] disabled:opacity-60"
-                label="Sign in with Google"
-                shortLabel="Sign in"
-              />
-            </div>
-          ) : !isMemberActive ? (
+          {!isMemberActive ? (
             <div className="mt-5 flex gap-3 rounded-[10px] border border-amber-200 bg-amber-50 p-4 text-amber-900">
               <ShieldAlert className="mt-0.5 shrink-0" size={20} aria-hidden="true" />
               <p className="text-sm leading-6">This account is read-only and cannot submit proposals.</p>
