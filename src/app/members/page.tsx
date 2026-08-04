@@ -55,7 +55,7 @@ export default async function MembersPage() {
         .returns<EspnTeamRow[]>(),
       supabase
         .from("member_team_links")
-        .select("espn_member_id, member:league_members(id, display_name, team_name)")
+        .select("espn_member_id, member:league_members!member_team_links_member_id_fkey(id, display_name, team_name)")
         .returns<TeamLinkRow[]>(),
     ]);
 

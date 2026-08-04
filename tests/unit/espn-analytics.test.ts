@@ -1,7 +1,48 @@
-import { buildAllTimeRanking, buildHeadToHead, teamSeasonKey } from "@/lib/espn/analytics";
+import { buildAllTimeRanking, buildHeadToHead, normalizeMatchups, normalizeTeams, teamSeasonKey } from "@/lib/espn/analytics";
 import { describe, expect, it } from "vitest";
 
 describe("ESPN analytics", () => {
+  it("prefers ESPN first and last name over username display name", () => {
+    const teams = normalizeTeams(2026, {
+      members: [
+        {
+          displayName: "fantasyUser123",
+          firstName: "Lleyton",
+          id: "{owner}",
+          lastName: "Ito",
+        },
+      ],
+      teams: [
+        {
+          id: 10,
+          name: "the REAL Lleyton Ito",
+          primaryOwner: "{owner}",
+        },
+      ],
+    });
+
+    expect(teams[0]).toMatchObject({
+      ownerDisplayName: "Lleyton Ito",
+      teamName: "the REAL Lleyton Ito",
+    });
+  });
+
+  it("skips undecided ESPN schedule rows", () => {
+    const matchups = normalizeMatchups(2026, {
+      schedule: [
+        {
+          away: { teamId: 2, totalPoints: 0 },
+          home: { teamId: 1, totalPoints: 0 },
+          id: 1,
+          matchupPeriodId: 1,
+          winner: "UNDECIDED",
+        },
+      ],
+    });
+
+    expect(matchups).toHaveLength(0);
+  });
+
   it("ranks managers with championship and runner-up bonuses", () => {
     const rankings = buildAllTimeRanking([
       team({ espnMemberId: "a", finalRank: 1, season: 2024, teamName: "Alpha" }),
@@ -32,7 +73,7 @@ describe("ESPN analytics", () => {
       new Set([teamSeasonKey(2024, 2), teamSeasonKey(2025, 8)]),
       [
         matchup({ awayScore: 90, awayTeamId: 2, homeScore: 100, homeTeamId: 1, season: 2024 }),
-        matchup({ awayScore: 101, awayTeamId: 8, homeScore: 99, homeTeamId: 4, season: 2025 }),
+        matchup({ awayScore: 101, awayTeamId: 8, homeScore: 99, homeTeamId: 4, season: 2025, winner: "AWAY" }),
         matchup({ awayScore: 10, awayTeamId: 3, homeScore: 20, homeTeamId: 1, season: 2025 }),
       ],
     );
@@ -73,6 +114,7 @@ function matchup(overrides: {
   homeScore: number;
   homeTeamId: number;
   season: number;
+  winner?: string;
 }) {
   return {
     awayScore: overrides.awayScore,
@@ -83,6 +125,6 @@ function matchup(overrides: {
     matchupPeriodId: 1,
     playoffTierType: null,
     season: overrides.season,
-    winner: "HOME",
+    winner: overrides.winner ?? "HOME",
   };
 }

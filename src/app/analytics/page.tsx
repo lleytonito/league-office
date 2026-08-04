@@ -105,9 +105,15 @@ export default async function AnalyticsPage() {
 
             {rankings.length ? (
               <div className="mt-4 grid gap-2">
+                <div className="hidden grid-cols-[auto_1fr_auto_auto] gap-3 px-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#6a725f] sm:grid">
+                  <span>Rank</span>
+                  <span>Team</span>
+                  <span>Avg</span>
+                  <span>Champ W/L</span>
+                </div>
                 {rankings.map((row, index) => (
                   <article
-                    className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[8px] border border-[#e1e5d9] bg-[#fbfcf8] p-3"
+                    className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[8px] border border-[#e1e5d9] bg-[#fbfcf8] p-3 sm:grid-cols-[auto_1fr_auto_auto]"
                     key={`${row.latestTeamName}-${index}`}
                   >
                     <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#183a2b] text-sm font-semibold text-white">
@@ -118,13 +124,18 @@ export default async function AnalyticsPage() {
                       <p className="text-sm text-[#626b59]">
                         {row.latestTeamName} · {row.seasonsPlayed} seasons · {row.totalPoints} total pts
                       </p>
+                      <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#7a5638] sm:hidden">
+                        <Trophy size={13} aria-hidden="true" />
+                        Champ W/L {row.championships}-{row.runnerUps}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-semibold text-[#293421]">{row.averagePoints}</p>
-                      <p className="inline-flex items-center gap-1 text-xs font-semibold text-[#7a5638]">
-                        <Trophy size={13} aria-hidden="true" />
-                        Champ {row.championships} · RU {row.runnerUps}
-                      </p>
+                      <p className="text-xs font-semibold text-[#6a725f] sm:hidden">avg</p>
+                    </div>
+                    <div className="hidden items-center justify-end gap-1 text-sm font-semibold text-[#7a5638] sm:inline-flex">
+                      <Trophy size={14} aria-hidden="true" />
+                      {row.championships}-{row.runnerUps}
                     </div>
                   </article>
                 ))}

@@ -95,8 +95,9 @@ export function normalizeMatchups(season: number, data: EspnLeagueSeasonData): N
   return (data.schedule ?? []).flatMap((matchup, index) => {
     const homeTeamId = positiveInteger(matchup.home?.teamId);
     const awayTeamId = positiveInteger(matchup.away?.teamId);
+    const winner = matchup.winner ?? null;
 
-    if (!homeTeamId || !awayTeamId) {
+    if (!homeTeamId || !awayTeamId || !winner || winner === "UNDECIDED") {
       return [];
     }
 
@@ -109,7 +110,7 @@ export function normalizeMatchups(season: number, data: EspnLeagueSeasonData): N
       matchupPeriodId: positiveInteger(matchup.matchupPeriodId) ?? 0,
       playoffTierType: matchup.playoffTierType ?? null,
       season,
-      winner: matchup.winner ?? null,
+      winner,
     }];
   });
 }
@@ -238,7 +239,16 @@ export function buildHeadToHead(
     pointsAgainst += scoreAgainst;
     seasons.add(matchup.season);
 
-    if (scoreFor > scoreAgainst) {
+    if (matchup.winner === "TIE") {
+      ties += 1;
+    } else if (
+      (teamAIsHome && matchup.winner === "HOME") ||
+      (!teamAIsHome && matchup.winner === "AWAY")
+    ) {
+      wins += 1;
+    } else if (matchup.winner === "HOME" || matchup.winner === "AWAY") {
+      losses += 1;
+    } else if (scoreFor > scoreAgainst) {
       wins += 1;
     } else if (scoreFor < scoreAgainst) {
       losses += 1;
@@ -279,8 +289,8 @@ function espnMemberDisplayName(member: {
   lastName?: string;
 }) {
   return (
-    member.displayName ||
     [member.firstName, member.lastName].filter(Boolean).join(" ").trim() ||
+    member.displayName ||
     "ESPN manager"
   );
 }

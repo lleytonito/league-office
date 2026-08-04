@@ -187,7 +187,7 @@ export default async function AdminPage() {
           .returns<EspnTeamRow[]>(),
         supabase
           .from("member_team_links")
-          .select("member_id, espn_member_id, member:league_members(display_name, team_name)")
+          .select("member_id, espn_member_id, member:league_members!member_team_links_member_id_fkey(display_name, team_name)")
           .returns<MemberTeamLinkRow[]>(),
         supabase
           .from("championship_detections")
