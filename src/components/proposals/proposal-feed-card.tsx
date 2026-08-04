@@ -389,5 +389,6 @@ function formatShortDate(value: string | null | undefined) {
     hour: "numeric",
     minute: "2-digit",
     month: "short",
+    timeZone: "America/Los_Angeles",
   }).format(new Date(value));
 }
