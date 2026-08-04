@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="League Office">
+  <rect width="64" height="64" rx="14" fill="#f7f8f4"/>
+  <path d="M20 15h24v7h5c2.8 0 5 2.2 5 5v2c0 7.2-5.4 13.2-12.4 14.1-1.5 3.8-4.7 6.6-8.6 7.3V55h9v5H22v-5h9v-4.6c-3.9-.7-7.1-3.5-8.6-7.3C15.4 42.2 10 36.2 10 29v-2c0-2.8 2.2-5 5-5h5v-7Zm0 12h-5v2c0 3.9 2.3 7.3 5.7 8.9-.5-2.1-.7-4.5-.7-7.1V27Zm24 0v3.8c0 2.6-.2 5-.7 7.1 3.4-1.6 5.7-5 5.7-8.9v-2h-5Z" fill="#183a2b"/>
+  <path d="M27 21h10v6h-4v13h-6V21Z" fill="#d8e5c9" opacity=".9"/>
+</svg>

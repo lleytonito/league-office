@@ -13,6 +13,11 @@ export const metadata: Metadata = {
   title: "League Office",
   description: "Private league proposals, voting, and commissioner tools.",
   applicationName: "League Office",
+  icons: {
+    apple: "/apple-icon.svg",
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+  },
   appleWebApp: {
     capable: true,
     title: "League Office",
