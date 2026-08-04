@@ -28,6 +28,7 @@
 deno.lock
 *.pem
 .tmp-supabase-init/
+supabase/.temp*/
 
 # debug
 npm-debug.log*
