@@ -139,9 +139,9 @@ export function ProposalFeedCard({
 
     try {
       const result = await castVoteWithFetch(proposal.id, optionId);
-      setVoteState(result);
 
       if (result.ok) {
+        setVoteState({ message: "", ok: false });
         setConfirmedVote({
           option_id: optionId,
           proposal_id: proposal.id,
@@ -152,6 +152,7 @@ export function ProposalFeedCard({
         return;
       }
 
+      setVoteState(result);
       setOptimisticOptionId(null);
     } finally {
       setSubmittingOptionId(null);
@@ -329,11 +330,7 @@ export function ProposalFeedCard({
       ) : !canSeeResults && userVote ? null : !canSeeResults ? (
         <p className="mt-4 flex items-center gap-2 text-sm text-[#6a725f]">
           <BarChart3 size={16} aria-hidden="true" />
-          {submittingOptionId
-            ? "Saving your vote..."
-            : voteState.ok
-              ? "Vote recorded. Results are loading..."
-              : "Results unlock after you vote."}
+          {submittingOptionId ? "Saving your vote..." : "Results unlock after you vote."}
         </p>
       ) : proposal.status === "closed" ? (
         <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-[#293421]">

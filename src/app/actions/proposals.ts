@@ -13,8 +13,8 @@ const emptyState: ProposalActionState = { message: "", ok: false };
 
 const proposalSchema = z.object({
   rationale: z.string().trim().max(4000).optional(),
-  summary: z.string().trim().min(10).max(4000),
-  title: z.string().trim().min(4).max(140),
+  summary: z.string().trim().max(4000),
+  title: z.string().trim().min(1).max(140),
 });
 
 const announcementSchema = z.object({
@@ -43,7 +43,7 @@ export async function submitProposalAction(
   const options = optionValues(formData);
 
   if (!parsed.success) {
-    return { message: "Add a title and a clear proposal summary.", ok: false };
+    return { message: "Add a proposal title.", ok: false };
   }
 
   if (options.length < 2) {
@@ -205,7 +205,7 @@ export async function approveProposalAction(
   const options = optionValues(formData);
 
   if (!proposalId || !parsed.success || options.length < 2) {
-    return { message: "Proposal, summary, and at least two options are required.", ok: false };
+    return { message: "Proposal title and at least two options are required.", ok: false };
   }
 
   const deadline = closesAt ? new Date(closesAt) : defaultVotingDeadline();

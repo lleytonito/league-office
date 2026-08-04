@@ -39,7 +39,6 @@ export function SubmitProposalForm({ disabled }: { disabled: boolean }) {
           maxLength={4000}
           name="summary"
           placeholder="Describe the change and how it should work."
-          required
         />
       </div>
 

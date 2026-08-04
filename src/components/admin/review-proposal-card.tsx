@@ -71,7 +71,6 @@ export function ReviewProposalCard({ proposal }: { proposal: ReviewProposal }) {
           disabled={pending}
           maxLength={4000}
           name="summary"
-          required
         />
         <div className="grid gap-2">
           <div className="flex items-center justify-between gap-3">

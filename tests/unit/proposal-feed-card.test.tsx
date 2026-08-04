@@ -46,6 +46,8 @@ describe("ProposalFeedCard voting feedback", () => {
       expect(screen.getByText("1 / 100%")).toBeInTheDocument();
     });
     expect(screen.getByText("0 / 0%")).toBeInTheDocument();
+    expect(screen.queryByText("Vote recorded.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Vote recorded. Results are loading...")).not.toBeInTheDocument();
     expect(routerMocks.refresh).toHaveBeenCalledOnce();
   });
 
