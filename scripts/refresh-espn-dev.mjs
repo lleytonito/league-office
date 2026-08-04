@@ -57,6 +57,7 @@ for (const season of seasons) {
 
 const completedTeams = allTeams.filter((team) => completedSeasonCandidates.includes(team.season));
 const rankings = buildAllTimeRanking(completedTeams);
+const luckIndex = buildLuckIndex(completedTeams, allTeams);
 const champions = detectChampionships(completedTeams);
 const sql = buildRefreshSql({
   champions,
@@ -64,6 +65,7 @@ const sql = buildRefreshSql({
   errors,
   matchups: allMatchups,
   rankings,
+  luckIndex,
   seasons,
   snapshots,
   startedAt,
@@ -96,6 +98,7 @@ function buildRefreshSql({
   syncRunId,
   teams,
 }) {
+  const completedAnalyticsSeasons = completed.filter((season) => completedSeasonCandidates.includes(season));
   const statements = [
     "begin;",
     `insert into public.espn_sync_runs (id, status, league_id, seasons_requested, seasons_completed, error_summary, started_at, finished_at)
@@ -130,7 +133,19 @@ values ('all-time-rankings', 'All-Time Rankings', 'Power score with placement po
         score: "(totalPoints + baselineAverage * priorSeasons) / (seasonsPlayed + priorSeasons)",
       },
       rankings,
-      seasonsCompleted: completed.filter((season) => completedSeasonCandidates.includes(season)),
+      seasonsCompleted: completedAnalyticsSeasons,
+      seasonsWithErrors: errors,
+    })}, ${literal(errors.length ? "stale" : "fresh")}, ${nullable(errors.join("\n"))}, now(), now())
+on conflict (metric_key) do update
+set title = excluded.title, summary = excluded.summary, payload = excluded.payload, status = excluded.status, error_summary = excluded.error_summary, last_refreshed_at = excluded.last_refreshed_at, updated_at = now();`,
+    `insert into public.analytics_results (metric_key, title, summary, payload, status, error_summary, last_refreshed_at, updated_at)
+values ('luck-index', 'Luck Index', 'Points-for rank compared to final ESPN finish for current active teams.', ${jsonLiteral({
+      formula: {
+        expectedRank: "points-for rank within season",
+        score: "average(expected rank - final rank)",
+      },
+      luckIndex,
+      seasonsCompleted: completedAnalyticsSeasons,
       seasonsWithErrors: errors,
     })}, ${literal(errors.length ? "stale" : "fresh")}, ${nullable(errors.join("\n"))}, now(), now())
 on conflict (metric_key) do update
@@ -342,6 +357,91 @@ function buildAllTimeRanking(teams) {
   });
 }
 
+function buildLuckIndex(completedTeams, allTeams) {
+  const latestSeason = maxNumber(allTeams.map((team) => team.season));
+  if (!latestSeason) return [];
+
+  const activeTeams = allTeams.filter((team) => team.season === latestSeason && team.espnMemberId);
+  const activeEspnMemberIds = new Set(activeTeams.map((team) => team.espnMemberId));
+  const latestTeamByMemberId = new Map(activeTeams.map((team) => [team.espnMemberId, team]));
+  const rows = new Map();
+  const pointRankTeams = completedTeams.filter((team) => team.finalRank && team.finalRank > 0 && team.points !== null);
+  const completedActiveTeams = pointRankTeams.filter(
+    (team) =>
+      team.espnMemberId &&
+      activeEspnMemberIds.has(team.espnMemberId),
+  );
+  const teamsBySeason = groupBy(pointRankTeams, (team) => team.season);
+
+  for (const seasonTeams of teamsBySeason.values()) {
+    const pointsRanks = rankTeamsByPoints(seasonTeams);
+
+    for (const team of seasonTeams.filter((item) => completedActiveTeams.includes(item))) {
+      const expectedRank = pointsRanks.get(`${team.season}:${team.espnTeamId}`);
+      const actualRank = team.finalRank;
+      if (!expectedRank || !actualRank) continue;
+
+      const latestTeam = latestTeamByMemberId.get(team.espnMemberId) ?? team;
+      const existing = rows.get(team.espnMemberId) ?? {
+        actualRankTotal: 0,
+        averageActualRank: null,
+        averageExpectedRank: null,
+        espnMemberId: team.espnMemberId,
+        expectedRankTotal: 0,
+        latestTeamName: latestTeam.teamName,
+        luckScore: 0,
+        managerLabel: latestTeam.ownerDisplayName ?? latestTeam.teamName,
+        seasonsPlayed: 0,
+        totalLuck: 0,
+      };
+
+      existing.latestTeamName = latestTeam.teamName;
+      existing.managerLabel = latestTeam.ownerDisplayName ?? latestTeam.teamName;
+      existing.actualRankTotal += actualRank;
+      existing.expectedRankTotal += expectedRank;
+      existing.totalLuck += expectedRank - actualRank;
+      existing.seasonsPlayed += 1;
+      existing.averageActualRank = roundOne(existing.actualRankTotal / existing.seasonsPlayed);
+      existing.averageExpectedRank = roundOne(existing.expectedRankTotal / existing.seasonsPlayed);
+      existing.luckScore = roundOne(existing.totalLuck / existing.seasonsPlayed);
+      rows.set(team.espnMemberId, existing);
+    }
+  }
+
+  for (const [espnMemberId, latestTeam] of latestTeamByMemberId) {
+    if (!rows.has(espnMemberId)) {
+      rows.set(espnMemberId, {
+        actualRankTotal: 0,
+        averageActualRank: null,
+        averageExpectedRank: null,
+        espnMemberId,
+        expectedRankTotal: 0,
+        latestTeamName: latestTeam.teamName,
+        luckScore: 0,
+        managerLabel: latestTeam.ownerDisplayName ?? latestTeam.teamName,
+        seasonsPlayed: 0,
+        totalLuck: 0,
+      });
+    }
+  }
+
+  return [...rows.values()]
+    .map((row) => ({
+      averageActualRank: row.averageActualRank,
+      averageExpectedRank: row.averageExpectedRank,
+      espnMemberId: row.espnMemberId,
+      latestTeamName: row.latestTeamName,
+      luckScore: row.luckScore,
+      managerLabel: row.managerLabel,
+      seasonsPlayed: row.seasonsPlayed,
+      totalLuck: row.totalLuck,
+    }))
+    .sort((a, b) => {
+      if (b.luckScore !== a.luckScore) return b.luckScore - a.luckScore;
+      return a.managerLabel.localeCompare(b.managerLabel);
+    });
+}
+
 function detectChampionships(teams) {
   const bySeason = new Map();
   for (const team of teams.filter((item) => item.finalRank && item.finalRank > 0)) {
@@ -419,6 +519,37 @@ function positiveInteger(value) {
 
 function roundOne(value) {
   return Math.round(value * 10) / 10;
+}
+
+function maxNumber(values) {
+  return values.length ? Math.max(...values) : null;
+}
+
+function groupBy(values, keyFor) {
+  const map = new Map();
+  for (const value of values) {
+    const key = keyFor(value);
+    map.set(key, [...(map.get(key) ?? []), value]);
+  }
+  return map;
+}
+
+function rankTeamsByPoints(teams) {
+  const ranks = new Map();
+  const sortedTeams = [...teams].sort((a, b) => (b.points ?? 0) - (a.points ?? 0));
+  let lastPoints = null;
+  let currentRank = 0;
+
+  sortedTeams.forEach((team, index) => {
+    if (lastPoints === null || team.points !== lastPoints) {
+      currentRank = index + 1;
+      lastPoints = team.points;
+    }
+
+    ranks.set(`${team.season}:${team.espnTeamId}`, currentRank);
+  });
+
+  return ranks;
 }
 
 function intArray(values) {

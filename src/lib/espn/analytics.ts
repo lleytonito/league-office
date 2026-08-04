@@ -44,6 +44,17 @@ export type AllTimeRankingRow = {
   totalPoints: number;
 };
 
+export type LuckIndexRow = {
+  averageActualRank: number | null;
+  averageExpectedRank: number | null;
+  espnMemberId: string;
+  latestTeamName: string;
+  luckScore: number;
+  managerLabel: string;
+  seasonsPlayed: number;
+  totalLuck: number;
+};
+
 export type ChampionshipDetection = {
   espnMemberId: string | null;
   espnTeamId: number;
@@ -64,6 +75,34 @@ export type HeadToHeadSummary = {
   seasons: number[];
   ties: number;
   totalMatchups: number;
+  wins: number;
+};
+
+export type TeamEraSummary = {
+  averageFinish: number | null;
+  bestSeason: TeamEraSeason | null;
+  championships: number;
+  favoriteOpponent: TeamEraFavoriteOpponent | null;
+  runnerUps: number;
+  seasonsPlayed: number;
+  worstSeason: TeamEraSeason | null;
+};
+
+export type TeamEraSeason = {
+  finalRank: number;
+  season: number;
+  teamName: string;
+};
+
+export type TeamEraFavoriteOpponent = {
+  averageMargin: number;
+  losses: number;
+  managerLabel: string;
+  pointsFor: number;
+  teamName: string;
+  ties: number;
+  totalMatchups: number;
+  winPercentage: number;
   wins: number;
 };
 
@@ -183,6 +222,141 @@ export function buildAllTimeRanking(teams: NormalizedEspnTeam[]): AllTimeRanking
 
     return a.managerLabel.localeCompare(b.managerLabel);
   });
+}
+
+export function buildLuckIndex(
+  completedTeamRows: NormalizedEspnTeam[],
+  allTeamRows = completedTeamRows,
+): LuckIndexRow[] {
+  const latestSeason = maxNumber(allTeamRows.map((team) => team.season));
+  if (!latestSeason) {
+    return [];
+  }
+
+  const activeTeams = allTeamRows.filter((team) => team.season === latestSeason && team.espnMemberId);
+  const activeEspnMemberIds = new Set(activeTeams.map((team) => team.espnMemberId as string));
+  const latestTeamByMemberId = new Map(
+    activeTeams.map((team) => [team.espnMemberId as string, team]),
+  );
+  const rows = new Map<string, LuckIndexRow & { actualRankTotal: number; expectedRankTotal: number }>();
+  const completedTeams = completedTeamRows.filter(
+    (team) => team.finalRank && team.finalRank > 0 && team.points !== null,
+  );
+  const completedActiveTeams = completedTeams.filter(
+    (team) =>
+      team.espnMemberId &&
+      activeEspnMemberIds.has(team.espnMemberId),
+  );
+  const teamsBySeason = groupBy(completedTeams, (team) => team.season);
+
+  for (const seasonTeams of teamsBySeason.values()) {
+    const pointsRanks = rankTeamsByPoints(seasonTeams);
+
+    for (const team of seasonTeams.filter((item) => completedActiveTeams.includes(item))) {
+      const espnMemberId = team.espnMemberId as string;
+      const expectedRank = pointsRanks.get(teamSeasonKey(team.season, team.espnTeamId));
+      const actualRank = team.finalRank;
+
+      if (!expectedRank || !actualRank) {
+        continue;
+      }
+
+      const latestTeam = latestTeamByMemberId.get(espnMemberId) ?? team;
+      const existing = rows.get(espnMemberId) ?? {
+        actualRankTotal: 0,
+        averageActualRank: null,
+        averageExpectedRank: null,
+        espnMemberId,
+        expectedRankTotal: 0,
+        latestTeamName: latestTeam.teamName,
+        luckScore: 0,
+        managerLabel: latestTeam.ownerDisplayName ?? latestTeam.teamName,
+        seasonsPlayed: 0,
+        totalLuck: 0,
+      };
+
+      existing.latestTeamName = latestTeam.teamName;
+      existing.managerLabel = latestTeam.ownerDisplayName ?? latestTeam.teamName;
+      existing.actualRankTotal += actualRank;
+      existing.expectedRankTotal += expectedRank;
+      existing.totalLuck += expectedRank - actualRank;
+      existing.seasonsPlayed += 1;
+      existing.averageActualRank = roundOne(existing.actualRankTotal / existing.seasonsPlayed);
+      existing.averageExpectedRank = roundOne(existing.expectedRankTotal / existing.seasonsPlayed);
+      existing.luckScore = roundOne(existing.totalLuck / existing.seasonsPlayed);
+      rows.set(espnMemberId, existing);
+    }
+  }
+
+  for (const [espnMemberId, latestTeam] of latestTeamByMemberId) {
+    if (!rows.has(espnMemberId)) {
+      rows.set(espnMemberId, {
+        actualRankTotal: 0,
+        averageActualRank: null,
+        averageExpectedRank: null,
+        espnMemberId,
+        expectedRankTotal: 0,
+        latestTeamName: latestTeam.teamName,
+        luckScore: 0,
+        managerLabel: latestTeam.ownerDisplayName ?? latestTeam.teamName,
+        seasonsPlayed: 0,
+        totalLuck: 0,
+      });
+    }
+  }
+
+  return [...rows.values()]
+    .map((row) => ({
+      averageActualRank: row.averageActualRank,
+      averageExpectedRank: row.averageExpectedRank,
+      espnMemberId: row.espnMemberId,
+      latestTeamName: row.latestTeamName,
+      luckScore: row.luckScore,
+      managerLabel: row.managerLabel,
+      seasonsPlayed: row.seasonsPlayed,
+      totalLuck: row.totalLuck,
+    }))
+    .sort((a, b) => {
+      if (b.luckScore !== a.luckScore) {
+        return b.luckScore - a.luckScore;
+      }
+
+      return a.managerLabel.localeCompare(b.managerLabel);
+    });
+}
+
+export function buildTeamEraSummary({
+  allTeams = [],
+  matchups = [],
+  targetTeams,
+}: {
+  allTeams?: NormalizedEspnTeam[];
+  matchups?: NormalizedEspnMatchup[];
+  targetTeams: NormalizedEspnTeam[];
+}): TeamEraSummary {
+  const completedTeams = targetTeams
+    .filter((team) => team.finalRank && team.finalRank > 0)
+    .sort((a, b) => b.season - a.season);
+  const seasonsPlayed = completedTeams.length;
+  const best = completedTeams.reduce<NormalizedEspnTeam | null>(
+    (current, team) => (!current || (team.finalRank ?? 99) < (current.finalRank ?? 99) ? team : current),
+    null,
+  );
+  const worst = completedTeams.reduce<NormalizedEspnTeam | null>(
+    (current, team) => (!current || (team.finalRank ?? 0) > (current.finalRank ?? 0) ? team : current),
+    null,
+  );
+  const finishTotal = completedTeams.reduce((total, team) => total + (team.finalRank ?? 0), 0);
+
+  return {
+    averageFinish: seasonsPlayed ? roundOne(finishTotal / seasonsPlayed) : null,
+    bestSeason: best ? teamEraSeason(best) : null,
+    championships: completedTeams.filter((team) => team.finalRank === 1).length,
+    favoriteOpponent: buildFavoriteOpponent(targetTeams, allTeams, matchups),
+    runnerUps: completedTeams.filter((team) => team.finalRank === 2).length,
+    seasonsPlayed,
+    worstSeason: worst ? teamEraSeason(worst) : null,
+  };
 }
 
 export function detectChampionships(teams: NormalizedEspnTeam[]): ChampionshipDetection[] {
@@ -321,8 +495,103 @@ function roundOne(value: number) {
   return Math.round(value * 10) / 10;
 }
 
+function maxNumber(values: number[]) {
+  return values.length ? Math.max(...values) : null;
+}
+
 function stabilizedPowerScore(totalPoints: number, seasonsPlayed: number) {
   const baselineAverage = 6.5;
   const priorSeasons = 2;
   return roundOne((totalPoints + baselineAverage * priorSeasons) / (seasonsPlayed + priorSeasons));
+}
+
+function groupBy<T, K>(values: T[], keyFor: (value: T) => K) {
+  const map = new Map<K, T[]>();
+
+  for (const value of values) {
+    const key = keyFor(value);
+    map.set(key, [...(map.get(key) ?? []), value]);
+  }
+
+  return map;
+}
+
+function rankTeamsByPoints(teams: NormalizedEspnTeam[]) {
+  const ranks = new Map<string, number>();
+  const sortedTeams = [...teams].sort((a, b) => (b.points ?? 0) - (a.points ?? 0));
+  let lastPoints: number | null = null;
+  let currentRank = 0;
+
+  sortedTeams.forEach((team, index) => {
+    if (lastPoints === null || team.points !== lastPoints) {
+      currentRank = index + 1;
+      lastPoints = team.points;
+    }
+
+    ranks.set(teamSeasonKey(team.season, team.espnTeamId), currentRank);
+  });
+
+  return ranks;
+}
+
+function teamEraSeason(team: NormalizedEspnTeam): TeamEraSeason {
+  return {
+    finalRank: team.finalRank as number,
+    season: team.season,
+    teamName: team.teamName,
+  };
+}
+
+function buildFavoriteOpponent(
+  targetTeams: NormalizedEspnTeam[],
+  allTeams: NormalizedEspnTeam[],
+  matchups: NormalizedEspnMatchup[],
+): TeamEraFavoriteOpponent | null {
+  if (!targetTeams.length || !allTeams.length || !matchups.length) {
+    return null;
+  }
+
+  const targetEspnMemberId = targetTeams[0]?.espnMemberId;
+  const latestSeason = maxNumber(allTeams.map((team) => team.season));
+  const targetKeys = new Set(targetTeams.map((team) => teamSeasonKey(team.season, team.espnTeamId)));
+  const activeTeams = allTeams.filter(
+    (team) => team.season === latestSeason && team.espnMemberId && team.espnMemberId !== targetEspnMemberId,
+  );
+  const candidates = activeTeams.flatMap((activeTeam) => {
+    const opponentTeams = allTeams.filter((team) => team.espnMemberId === activeTeam.espnMemberId);
+    const opponentKeys = new Set(opponentTeams.map((team) => teamSeasonKey(team.season, team.espnTeamId)));
+    const h2h = buildHeadToHead(targetKeys, opponentKeys, matchups);
+
+    if (!h2h || !h2h.totalMatchups) {
+      return [];
+    }
+
+    return [{
+      averageMargin: h2h.averageMargin,
+      losses: h2h.losses,
+      managerLabel: activeTeam.ownerDisplayName ?? activeTeam.teamName,
+      pointsFor: h2h.pointsFor,
+      teamName: activeTeam.teamName,
+      ties: h2h.ties,
+      totalMatchups: h2h.totalMatchups,
+      winPercentage: roundOne(((h2h.wins + h2h.ties * 0.5) / h2h.totalMatchups) * 100),
+      wins: h2h.wins,
+    }];
+  });
+
+  return candidates.sort((a, b) => {
+    if (b.winPercentage !== a.winPercentage) {
+      return b.winPercentage - a.winPercentage;
+    }
+
+    if (b.wins !== a.wins) {
+      return b.wins - a.wins;
+    }
+
+    if (b.averageMargin !== a.averageMargin) {
+      return b.averageMargin - a.averageMargin;
+    }
+
+    return a.managerLabel.localeCompare(b.managerLabel);
+  })[0] ?? null;
 }

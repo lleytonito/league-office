@@ -2,8 +2,10 @@
 
 import {
   buildAllTimeRanking,
+  buildLuckIndex,
   detectChampionships,
   type EspnIdentityAlias,
+  type NormalizedEspnTeam,
   normalizeMatchups,
   normalizeTeams,
 } from "@/lib/espn/analytics";
@@ -66,7 +68,8 @@ export async function refreshEspnAnalyticsAction(
   const syncRunId = syncRunResult.data.id;
   const completed: number[] = [];
   const errors: string[] = [];
-  const normalizedTeams = [];
+  const allNormalizedTeams: NormalizedEspnTeam[] = [];
+  const normalizedTeams: NormalizedEspnTeam[] = [];
   let seasons: number[] = [];
   const aliases = await fetchIdentityAliases(supabase);
 
@@ -84,6 +87,7 @@ export async function refreshEspnAnalyticsAction(
       const seasonData = await fetchEspnSeason(season);
       const seasonTeams = normalizeTeams(season, seasonData, aliases);
       const seasonMatchups = normalizeMatchups(season, seasonData);
+      allNormalizedTeams.push(...seasonTeams);
 
       await supabase.from("espn_league_snapshots").upsert(
         {
@@ -171,31 +175,54 @@ export async function refreshEspnAnalyticsAction(
   }
 
   const allTimeRanking = buildAllTimeRanking(normalizedTeams);
+  const luckIndex = buildLuckIndex(normalizedTeams, allNormalizedTeams);
   const championshipDetections = detectChampionships(normalizedTeams);
 
+  const analyticsTimestamp = new Date().toISOString();
+  const completedAnalyticsSeasons = completed.filter((season) => completedSeasonCandidates.includes(season));
   const { error: analyticsError } = await supabase.from("analytics_results").upsert(
-    {
-      error_summary: errors.length ? errors.join("\n") : null,
-      last_refreshed_at: new Date().toISOString(),
-      metric_key: "all-time-rankings",
-      payload: {
-        formula: {
-          baselineAverage: 6.5,
-          championshipBonus: 3,
-          placement: "season team count - final rank + 1",
-          priorSeasons: 2,
-          runnerUpBonus: 1,
-          score: "(totalPoints + baselineAverage * priorSeasons) / (seasonsPlayed + priorSeasons)",
+    [
+      {
+        error_summary: errors.length ? errors.join("\n") : null,
+        last_refreshed_at: analyticsTimestamp,
+        metric_key: "all-time-rankings",
+        payload: {
+          formula: {
+            baselineAverage: 6.5,
+            championshipBonus: 3,
+            placement: "season team count - final rank + 1",
+            priorSeasons: 2,
+            runnerUpBonus: 1,
+            score: "(totalPoints + baselineAverage * priorSeasons) / (seasonsPlayed + priorSeasons)",
+          },
+          rankings: allTimeRanking,
+          seasonsCompleted: completedAnalyticsSeasons,
+          seasonsWithErrors: errors,
         },
-        rankings: allTimeRanking,
-        seasonsCompleted: completed.filter((season) => completedSeasonCandidates.includes(season)),
-        seasonsWithErrors: errors,
+        status: errors.length ? "stale" : "fresh",
+        summary: "Placement points with championship and runner-up bonuses.",
+        title: "All-Time Rankings",
+        updated_by_member_id: actor.id,
       },
-      status: errors.length ? "stale" : "fresh",
-      summary: "Placement points with championship and runner-up bonuses.",
-      title: "All-Time Rankings",
-      updated_by_member_id: actor.id,
-    },
+      {
+        error_summary: errors.length ? errors.join("\n") : null,
+        last_refreshed_at: analyticsTimestamp,
+        metric_key: "luck-index",
+        payload: {
+          formula: {
+            expectedRank: "points-for rank within season",
+            score: "average(expected rank - final rank)",
+          },
+          luckIndex,
+          seasonsCompleted: completedAnalyticsSeasons,
+          seasonsWithErrors: errors,
+        },
+        status: errors.length ? "stale" : "fresh",
+        summary: "Points-for rank compared to final ESPN finish for current active teams.",
+        title: "Luck Index",
+        updated_by_member_id: actor.id,
+      },
+    ],
     { onConflict: "metric_key" },
   );
 

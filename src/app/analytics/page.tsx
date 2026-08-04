@@ -1,4 +1,5 @@
 import { AllTimeRankingsCard, type AllTimeRankingRow } from "@/components/analytics/all-time-rankings-card";
+import { LuckIndexCard, type LuckIndexRow } from "@/components/analytics/luck-index-card";
 import { LoginWall } from "@/components/auth/login-wall";
 import { AppHeader } from "@/components/layout/app-header";
 import { createClient } from "@/lib/supabase/server";
@@ -14,8 +15,10 @@ type Member = {
 };
 
 type AnalyticsResult = {
+  metric_key: string;
   last_refreshed_at: string | null;
   payload: {
+    luckIndex?: LuckIndexRow[];
     rankings?: AllTimeRankingRow[];
     seasonsCompleted?: number[];
     seasonsWithErrors?: string[];
@@ -38,14 +41,19 @@ export default async function AnalyticsPage() {
     .select("display_name, team_name, is_member, is_admin, revoked_at")
     .eq("auth_user_id", user.id)
     .maybeSingle<Member>();
-  const { data: rankingResult, error } = await supabase
+  const { data: analyticsResults, error } = await supabase
     .from("analytics_results")
-    .select("payload, status, last_refreshed_at")
-    .eq("metric_key", "all-time-rankings")
-    .maybeSingle<AnalyticsResult>();
+    .select("metric_key, payload, status, last_refreshed_at")
+    .in("metric_key", ["all-time-rankings", "luck-index"])
+    .returns<AnalyticsResult[]>();
+  const resultByKey = new Map((analyticsResults ?? []).map((result) => [result.metric_key, result]));
+  const rankingResult = resultByKey.get("all-time-rankings") ?? null;
+  const luckResult = resultByKey.get("luck-index") ?? null;
   const rankings = rankingResult?.payload?.rankings ?? [];
+  const luckIndex = luckResult?.payload?.luckIndex ?? [];
   const completedSeasons = rankingResult?.payload?.seasonsCompleted ?? [];
-  const hasWarnings = Boolean(rankingResult?.payload?.seasonsWithErrors?.length);
+  const rankingHasWarnings = Boolean(rankingResult?.payload?.seasonsWithErrors?.length);
+  const luckHasWarnings = Boolean(luckResult?.payload?.seasonsWithErrors?.length);
 
   return (
     <main className="min-h-dvh bg-[#f7f8f4] text-[#111411]">
@@ -67,12 +75,19 @@ export default async function AnalyticsPage() {
             Analytics could not load.
           </p>
         ) : (
-          <AllTimeRankingsCard
-            completedSeasons={completedSeasons}
-            hasWarnings={hasWarnings}
-            lastRefreshedAt={rankingResult?.last_refreshed_at ?? null}
-            rankings={rankings}
-          />
+          <>
+            <AllTimeRankingsCard
+              completedSeasons={completedSeasons}
+              hasWarnings={rankingHasWarnings}
+              lastRefreshedAt={rankingResult?.last_refreshed_at ?? null}
+              rankings={rankings}
+            />
+            <LuckIndexCard
+              hasWarnings={luckHasWarnings}
+              lastRefreshedAt={luckResult?.last_refreshed_at ?? null}
+              rows={luckIndex}
+            />
+          </>
         )}
       </section>
     </main>

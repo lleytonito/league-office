@@ -1,4 +1,12 @@
-import { buildAllTimeRanking, buildHeadToHead, normalizeMatchups, normalizeTeams, teamSeasonKey } from "@/lib/espn/analytics";
+import {
+  buildAllTimeRanking,
+  buildHeadToHead,
+  buildLuckIndex,
+  buildTeamEraSummary,
+  normalizeMatchups,
+  normalizeTeams,
+  teamSeasonKey,
+} from "@/lib/espn/analytics";
 import { describe, expect, it } from "vitest";
 
 describe("ESPN analytics", () => {
@@ -116,26 +124,97 @@ describe("ESPN analytics", () => {
       wins: 1,
     });
   });
+
+  it("builds luck index for current active teams from points rank versus final rank", () => {
+    const completedTeams = [
+      team({ espnMemberId: "active-a", finalRank: 4, points: 400, season: 2025, teamName: "Alpha" }),
+      team({ espnMemberId: "active-b", finalRank: 1, points: 300, season: 2025, teamName: "Bravo" }),
+      team({ espnMemberId: "inactive-c", finalRank: 2, points: 500, season: 2025, teamName: "Charlie" }),
+      team({ espnMemberId: "active-a", finalRank: 2, points: 200, season: 2024, teamName: "Alpha Old" }),
+      team({ espnMemberId: "active-b", finalRank: 3, points: 250, season: 2024, teamName: "Bravo Old" }),
+    ];
+    const currentTeams = [
+      team({ espnMemberId: "active-a", finalRank: 0, points: 0, season: 2026, teamName: "Alpha Now" }),
+      team({ espnMemberId: "active-b", finalRank: 0, points: 0, season: 2026, teamName: "Bravo Now" }),
+    ];
+    const luck = buildLuckIndex(completedTeams, [...completedTeams, ...currentTeams]);
+
+    expect(luck.map((row) => row.espnMemberId)).toEqual(["active-b", "active-a"]);
+    expect(luck[0]).toMatchObject({
+      espnMemberId: "active-b",
+      latestTeamName: "Bravo Now",
+      luckScore: 0,
+      seasonsPlayed: 2,
+    });
+    expect(luck[1]).toMatchObject({
+      espnMemberId: "active-a",
+      latestTeamName: "Alpha Now",
+      luckScore: -1,
+      seasonsPlayed: 2,
+    });
+  });
+
+  it("builds a team era summary with favorite active opponent", () => {
+    const targetTeams = [
+      team({ espnMemberId: "target", finalRank: 1, season: 2024, teamName: "Target Old" }),
+      team({ espnMemberId: "target", finalRank: 5, season: 2025, teamName: "Target Now" }),
+    ];
+    const activeOpponent = team({ espnMemberId: "opponent", finalRank: 4, season: 2025, teamName: "Opponent Now" });
+    const inactiveOpponent = team({ espnMemberId: "inactive", finalRank: 2, season: 2024, teamName: "Inactive" });
+    const summary = buildTeamEraSummary({
+      allTeams: [...targetTeams, activeOpponent, inactiveOpponent],
+      matchups: [
+        matchup({ awayScore: 90, awayTeamId: 2, homeScore: 110, homeTeamId: 1, season: 2025 }),
+        matchup({ awayScore: 120, awayTeamId: 3, homeScore: 90, homeTeamId: 1, season: 2024, winner: "AWAY" }),
+      ],
+      targetTeams,
+    });
+
+    expect(summary).toMatchObject({
+      averageFinish: 3,
+      championships: 1,
+      seasonsPlayed: 2,
+    });
+    expect(summary.bestSeason).toMatchObject({ finalRank: 1, season: 2024 });
+    expect(summary.worstSeason).toMatchObject({ finalRank: 5, season: 2025 });
+    expect(summary.favoriteOpponent).toMatchObject({
+      managerLabel: "Manager B",
+      totalMatchups: 1,
+      wins: 1,
+    });
+  });
 });
 
 function team(overrides: {
   espnMemberId: string;
   finalRank: number;
+  points?: number;
   season: number;
   teamName: string;
 }) {
   return {
     abbreviation: null,
     espnMemberId: overrides.espnMemberId,
-    espnTeamId: overrides.espnMemberId === "a" ? 1 : 2,
+    espnTeamId: teamIdFor(overrides.espnMemberId),
     finalRank: overrides.finalRank,
     logoUrl: null,
     ownerDisplayName: overrides.espnMemberId === "a" ? "Manager A" : "Manager B",
     playoffSeed: null,
-    points: null,
+    points: overrides.points ?? null,
     season: overrides.season,
     teamName: overrides.teamName,
   };
+}
+
+function teamIdFor(espnMemberId: string) {
+  return {
+    "active-a": 1,
+    "active-b": 2,
+    inactive: 3,
+    "inactive-c": 3,
+    opponent: 2,
+    target: 1,
+  }[espnMemberId] ?? (espnMemberId === "a" ? 1 : 2);
 }
 
 function matchup(overrides: {

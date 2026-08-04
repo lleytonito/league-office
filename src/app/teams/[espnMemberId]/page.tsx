@@ -1,8 +1,15 @@
 import { LoginWall } from "@/components/auth/login-wall";
 import { AppHeader } from "@/components/layout/app-header";
 import { SeasonFinishes } from "@/components/teams/season-finishes";
+import { TeamEraCard } from "@/components/teams/team-era-card";
 import { TeamLogo } from "@/components/teams/team-logo";
-import { buildHeadToHead, teamSeasonKey, type NormalizedEspnMatchup } from "@/lib/espn/analytics";
+import {
+  buildHeadToHead,
+  buildTeamEraSummary,
+  teamSeasonKey,
+  type NormalizedEspnMatchup,
+  type NormalizedEspnTeam,
+} from "@/lib/espn/analytics";
 import { createClient } from "@/lib/supabase/server";
 import { ArrowLeft, Link2, Swords } from "lucide-react";
 import Link from "next/link";
@@ -124,11 +131,19 @@ export default async function TeamProfilePage({
     : [];
   const targetKeys = new Set(targetTeams.map((team) => teamSeasonKey(team.season, team.espn_team_id)));
   const currentKeys = new Set(currentTeamRows.map((team) => teamSeasonKey(team.season, team.espn_team_id)));
+  const normalizedTargetTeams = targetTeams.map(normalizeTeamRow);
+  const normalizedAllTeams = (allLinkedTeams ?? []).map(normalizeTeamRow);
+  const normalizedMatchups = (matchups ?? []).map(normalizeMatchupRow);
   const h2h =
     currentEspnMemberId && currentEspnMemberId !== decodedEspnMemberId
-      ? buildHeadToHead(currentKeys, targetKeys, (matchups ?? []).map(normalizeMatchupRow))
+      ? buildHeadToHead(currentKeys, targetKeys, normalizedMatchups)
       : null;
   const isOwnTeam = currentEspnMemberId === decodedEspnMemberId;
+  const eraSummary = buildTeamEraSummary({
+    allTeams: normalizedAllTeams,
+    matchups: normalizedMatchups,
+    targetTeams: normalizedTargetTeams,
+  });
 
   return (
     <main className="min-h-dvh bg-[#f7f8f4] text-[#111411]">
@@ -194,10 +209,27 @@ export default async function TeamProfilePage({
           </section>
         ) : null}
 
+        <TeamEraCard summary={eraSummary} />
+
         <SeasonFinishes teams={targetTeams} />
       </section>
     </main>
   );
+}
+
+function normalizeTeamRow(row: EspnTeamRow): NormalizedEspnTeam {
+  return {
+    abbreviation: null,
+    espnMemberId: row.espn_member_id,
+    espnTeamId: row.espn_team_id,
+    finalRank: row.final_rank,
+    logoUrl: row.logo_url,
+    ownerDisplayName: row.owner_display_name,
+    playoffSeed: null,
+    points: row.points,
+    season: row.season,
+    teamName: row.team_name,
+  };
 }
 
 function normalizeMatchupRow(row: MatchupRow): NormalizedEspnMatchup {

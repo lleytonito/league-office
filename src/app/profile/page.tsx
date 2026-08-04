@@ -4,7 +4,13 @@ import { ProfileForm } from "@/components/members/profile-form";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { AppHeader } from "@/components/layout/app-header";
 import { SeasonFinishes } from "@/components/teams/season-finishes";
+import { TeamEraCard } from "@/components/teams/team-era-card";
 import { TeamLogo } from "@/components/teams/team-logo";
+import {
+  buildTeamEraSummary,
+  type NormalizedEspnMatchup,
+  type NormalizedEspnTeam,
+} from "@/lib/espn/analytics";
 import { attachBadgesToMember, type MemberBadge, type MemberBadgeAward } from "@/lib/members/badges";
 import { memberDisplayName } from "@/lib/members/display";
 import { createClient } from "@/lib/supabase/server";
@@ -29,8 +35,21 @@ type EspnTeamRow = {
   final_rank: number | null;
   logo_url: string | null;
   owner_display_name: string | null;
+  points: number | null;
   season: number;
   team_name: string;
+};
+
+type MatchupRow = {
+  away_score: number | null;
+  away_team_id: number | null;
+  espn_matchup_id: number;
+  home_score: number | null;
+  home_team_id: number | null;
+  matchup_period_id: number;
+  playoff_tier_type: string | null;
+  season: number;
+  winner: string | null;
 };
 
 export default async function ProfilePage() {
@@ -62,15 +81,36 @@ export default async function ProfilePage() {
   const { data: linkedTeams } = teamLink?.espn_member_id
     ? await supabase
         .from("espn_teams")
-        .select("season, espn_member_id, espn_team_id, owner_display_name, team_name, logo_url, final_rank")
+        .select("season, espn_member_id, espn_team_id, owner_display_name, team_name, logo_url, final_rank, points")
         .eq("espn_member_id", teamLink.espn_member_id)
         .order("season", { ascending: false })
         .returns<EspnTeamRow[]>()
     : { data: [] as EspnTeamRow[] };
+  const [{ data: allTeams }, { data: matchups }] = teamLink?.espn_member_id
+    ? await Promise.all([
+        supabase
+          .from("espn_teams")
+          .select("season, espn_member_id, espn_team_id, owner_display_name, team_name, logo_url, final_rank, points")
+          .returns<EspnTeamRow[]>(),
+        supabase
+          .from("espn_matchups")
+          .select(
+            "season, espn_matchup_id, matchup_period_id, home_team_id, away_team_id, home_score, away_score, winner, playoff_tier_type",
+          )
+          .returns<MatchupRow[]>(),
+      ])
+    : [{ data: [] as EspnTeamRow[] }, { data: [] as MatchupRow[] }];
   const member = baseMember
     ? attachBadgesToMember({ ...baseMember, badges: [] as MemberBadge[] }, badgeAwards)
     : null;
   const latestLinkedTeam = linkedTeams?.[0] ?? null;
+  const eraSummary = linkedTeams?.length
+    ? buildTeamEraSummary({
+        allTeams: (allTeams ?? []).map(normalizeTeamRow),
+        matchups: (matchups ?? []).map(normalizeMatchupRow),
+        targetTeams: linkedTeams.map(normalizeTeamRow),
+      })
+    : null;
 
   const canEdit = Boolean(member?.is_member && !member.revoked_at);
 
@@ -137,6 +177,8 @@ export default async function ProfilePage() {
                 )}
               </section>
 
+              {eraSummary ? <TeamEraCard summary={eraSummary} /> : null}
+
               {linkedTeams?.length ? <SeasonFinishes teams={linkedTeams} /> : null}
 
               <section className="rounded-[10px] border border-[#e1e5d9] bg-[#fbfcf8] p-4">
@@ -181,4 +223,33 @@ export default async function ProfilePage() {
       </section>
     </main>
   );
+}
+
+function normalizeTeamRow(row: EspnTeamRow): NormalizedEspnTeam {
+  return {
+    abbreviation: null,
+    espnMemberId: row.espn_member_id,
+    espnTeamId: row.espn_team_id,
+    finalRank: row.final_rank,
+    logoUrl: row.logo_url,
+    ownerDisplayName: row.owner_display_name,
+    playoffSeed: null,
+    points: row.points,
+    season: row.season,
+    teamName: row.team_name,
+  };
+}
+
+function normalizeMatchupRow(row: MatchupRow): NormalizedEspnMatchup {
+  return {
+    awayScore: row.away_score,
+    awayTeamId: row.away_team_id,
+    espnMatchupId: row.espn_matchup_id,
+    homeScore: row.home_score,
+    homeTeamId: row.home_team_id,
+    matchupPeriodId: row.matchup_period_id,
+    playoffTierType: row.playoff_tier_type,
+    season: row.season,
+    winner: row.winner,
+  };
 }
