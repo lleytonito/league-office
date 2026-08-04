@@ -3,26 +3,38 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const actionMocks = vi.hoisted(() => ({
-  castVoteAction: vi.fn(),
+const routerMocks = vi.hoisted(() => ({
+  refresh: vi.fn(),
 }));
 
 vi.mock("@/app/actions/proposals", () => ({
-  castVoteAction: actionMocks.castVoteAction,
   closeVotingAction: vi.fn(),
   deleteProposalAction: vi.fn(),
   toggleProposalPinAction: vi.fn(),
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => routerMocks,
+}));
+
 afterEach(() => {
   vi.useRealTimers();
-  actionMocks.castVoteAction.mockReset();
+  vi.restoreAllMocks();
+  routerMocks.refresh.mockReset();
 });
 
 describe("ProposalFeedCard voting feedback", () => {
   it("rolls back optimistic selection and shows an error when voting fails", async () => {
     const votePromise = deferred<{ message: string; ok: boolean }>();
-    actionMocks.castVoteAction.mockReturnValueOnce(votePromise.promise);
+    vi.spyOn(globalThis, "fetch").mockReturnValueOnce(
+      votePromise.promise.then(
+        (payload) =>
+          ({
+            json: async () => payload,
+            ok: payload.ok,
+          }) as Response,
+      ),
+    );
 
     render(
       <ProposalFeedCard
@@ -53,7 +65,17 @@ describe("ProposalFeedCard voting feedback", () => {
 
   it("stops showing recording forever when voting does not resolve", async () => {
     vi.useFakeTimers();
-    actionMocks.castVoteAction.mockReturnValueOnce(new Promise(() => {}));
+    vi.spyOn(globalThis, "fetch").mockImplementationOnce((_input, init) => {
+      const signal = init?.signal;
+
+      return new Promise<Response>((_resolve, reject) => {
+        if (signal instanceof AbortSignal) {
+          signal.addEventListener("abort", () => {
+            reject(new DOMException("Request aborted", "AbortError"));
+          });
+        }
+      });
+    });
 
     render(
       <ProposalFeedCard
@@ -71,6 +93,8 @@ describe("ProposalFeedCard voting feedback", () => {
 
     await act(async () => {
       vi.advanceTimersByTime(15000);
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
     expect(screen.getByText("Voting is taking longer than expected. Refresh before trying again.")).toBeInTheDocument();
@@ -86,11 +110,11 @@ const proposalFixture: FeedProposal = {
   },
   closed_at: null,
   created_at: "2026-08-04T00:00:00.000Z",
-  id: "proposal-1",
+  id: "cfbcea44-d8c9-4bdb-bcd2-48ab49878451",
   is_pinned: false,
   options: [
-    { id: "option-1", label: "Looks good", sort_order: 0 },
-    { id: "option-2", label: "Needs work", sort_order: 1 },
+    { id: "a9008060-2689-483b-b3af-fd64e7397f49", label: "Looks good", sort_order: 0 },
+    { id: "aeb15be6-06c3-4963-bd87-f7bb691e837a", label: "Needs work", sort_order: 1 },
   ],
   passed: null,
   pinned_at: null,

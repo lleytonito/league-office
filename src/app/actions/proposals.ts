@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { voteFailureMessage } from "@/lib/proposals/voting";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -386,108 +385,6 @@ export async function toggleProposalPinAction(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/admin");
-}
-
-export async function castVoteAction(formData: FormData): Promise<ProposalActionState> {
-  const supabase = await createClient();
-  const member = await getCurrentMember(supabase);
-  const proposalId = stringValue(formData.get("proposalId"));
-  const optionId = stringValue(formData.get("optionId"));
-
-  if (!member) {
-    return { message: "Sign in with Google to vote.", ok: false };
-  }
-
-  if (!member.isActive) {
-    return { message: "Your league access is inactive, so this vote was not recorded.", ok: false };
-  }
-
-  if (!proposalId || !optionId) {
-    return { message: "Choose a voting option.", ok: false };
-  }
-
-  const { data: option, error: optionError } = await supabase
-    .from("proposal_vote_options")
-    .select("id, proposal_id")
-    .eq("id", optionId)
-    .maybeSingle<{ id: string; proposal_id: string }>();
-
-  if (optionError) {
-    return { message: voteFailureMessage(optionError), ok: false };
-  }
-
-  if (!option || option.proposal_id !== proposalId) {
-    return { message: "That voting option is no longer available.", ok: false };
-  }
-
-  const { data: proposal, error: proposalError } = await supabase
-    .from("proposals")
-    .select("id, status")
-    .eq("id", proposalId)
-    .maybeSingle<{ id: string; status: string }>();
-
-  if (proposalError) {
-    return { message: voteFailureMessage(proposalError), ok: false };
-  }
-
-  if (!proposal || proposal.status !== "voting") {
-    return { message: "Voting is not open for this proposal.", ok: false };
-  }
-
-  const { data: votingWindow, error: windowError } = await supabase
-    .from("voting_windows")
-    .select("starts_at, ends_at, closed_at")
-    .eq("proposal_id", proposalId)
-    .maybeSingle<{ closed_at: string | null; ends_at: string; starts_at: string }>();
-
-  if (windowError) {
-    return { message: voteFailureMessage(windowError), ok: false };
-  }
-
-  const now = Date.now();
-  if (
-    !votingWindow ||
-    votingWindow.closed_at ||
-    new Date(votingWindow.starts_at).getTime() > now ||
-    new Date(votingWindow.ends_at).getTime() <= now
-  ) {
-    return { message: "Voting is closed for this proposal.", ok: false };
-  }
-
-  const { data: existingVote, error: existingVoteError } = await supabase
-    .from("votes")
-    .select("id")
-    .eq("proposal_id", proposalId)
-    .eq("voter_member_id", member.id)
-    .maybeSingle<{ id: string }>();
-
-  if (existingVoteError) {
-    return { message: voteFailureMessage(existingVoteError), ok: false };
-  }
-
-  if (existingVote) {
-    return { message: "You already voted on this proposal.", ok: false };
-  }
-
-  const { error } = await supabase.from("votes").insert({
-    option_id: optionId,
-    proposal_id: proposalId,
-    voter_member_id: member.id,
-  });
-
-  if (error) {
-    console.error("Vote insert failed", {
-      code: error.code,
-      memberId: member.id,
-      optionId,
-      proposalId,
-    });
-    return { message: voteFailureMessage(error), ok: false };
-  }
-
-  revalidatePath("/");
-  revalidatePath("/admin");
-  return { message: "Vote recorded.", ok: true };
 }
 
 function defaultVotingDeadline() {

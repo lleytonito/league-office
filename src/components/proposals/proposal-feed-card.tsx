@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  castVoteAction,
   closeVotingAction,
   deleteProposalAction,
   type ProposalActionState,
@@ -24,6 +23,7 @@ import {
   Vote,
   X,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export type FeedProposal = {
@@ -92,6 +92,7 @@ export function ProposalFeedCard({
   showAdminControls?: boolean;
   votes: VoteRow[];
 }) {
+  const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [optimisticOptionId, setOptimisticOptionId] = useState<string | null>(null);
@@ -121,6 +122,29 @@ export function ProposalFeedCard({
   }));
   const resultText = closedResultText(counts, proposal.passed, totalVotes);
   const detailsId = `proposal-details-${proposal.id}`;
+  async function handleVote(optionId: string) {
+    if (!canVote) {
+      return;
+    }
+
+    setVoteState({ message: "", ok: false });
+    setSubmittingOptionId(optionId);
+    setOptimisticOptionId(optionId);
+
+    try {
+      const result = await castVoteWithFetch(proposal.id, optionId);
+      setVoteState(result);
+
+      if (result.ok) {
+        router.refresh();
+        return;
+      }
+
+      setOptimisticOptionId(null);
+    } finally {
+      setSubmittingOptionId(null);
+    }
+  }
 
   return (
     <article className="overflow-hidden rounded-[10px] border border-[#d9decf] bg-white shadow-sm">
@@ -240,64 +264,35 @@ export function ProposalFeedCard({
           }
 
           return (
-            <form
-              action={async (formData) => {
-                setVoteState({ message: "", ok: false });
-                setSubmittingOptionId(option.id);
-                setOptimisticOptionId(option.id);
-                try {
-                  const result = await withVoteTimeout(castVoteAction(formData));
-                  setVoteState(result);
-                  if (!result.ok) {
-                    setOptimisticOptionId(null);
-                  }
-                } catch {
-                  setOptimisticOptionId(null);
-                  setVoteState({
-                    message: "Your vote could not be recorded. Refresh and try again.",
-                    ok: false,
-                  });
-                } finally {
-                  setSubmittingOptionId(null);
-                }
-              }}
+            <button
+              className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-[10px] border px-3 py-2.5 text-left text-sm font-semibold transition active:scale-[0.99] disabled:cursor-not-allowed ${
+                selected
+                  ? "vote-selected-pop border-[#587246] bg-[#edf4e6] text-[#293421] shadow-sm ring-2 ring-[#d9e5c9]"
+                  : "border-[#d9decf] bg-white text-[#293421] hover:border-[#587246] hover:bg-[#f4f8ef] disabled:opacity-60"
+              }`}
+              disabled={!canVote}
               key={option.id}
+              onClick={() => void handleVote(option.id)}
+              type="button"
             >
-              <input name="proposalId" type="hidden" value={proposal.id} />
-              <input name="optionId" type="hidden" value={option.id} />
-              <button
-                className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-[10px] border px-3 py-2.5 text-left text-sm font-semibold transition active:scale-[0.99] disabled:cursor-not-allowed ${
-                  selected
-                    ? "vote-selected-pop border-[#587246] bg-[#edf4e6] text-[#293421] shadow-sm ring-2 ring-[#d9e5c9]"
-                    : "border-[#d9decf] bg-white text-[#293421] hover:border-[#587246] hover:bg-[#f4f8ef] disabled:opacity-60"
-                }`}
-                disabled={!canVote}
-                onClick={() => {
-                  if (canVote) {
-                    setOptimisticOptionId(option.id);
-                  }
-                }}
-                type="submit"
-              >
-                <span className="min-w-0">
-                  <span className="block truncate">{option.label}</span>
-                  {votePending ? (
-                    <span className="mt-0.5 block text-xs font-semibold text-[#587246]">
-                      Recording vote...
-                    </span>
-                  ) : null}
-                </span>
+              <span className="min-w-0">
+                <span className="block truncate">{option.label}</span>
                 {votePending ? (
-                  <Loader2 className="shrink-0 animate-spin text-[#587246]" size={18} aria-hidden="true" />
-                ) : selected ? (
-                  <CheckCircle2 className="shrink-0 text-[#587246]" size={18} aria-hidden="true" />
-                ) : canVote ? (
-                  <Vote className="shrink-0 text-[#587246]" size={17} aria-hidden="true" />
-                ) : (
-                  <Lock className="shrink-0 text-[#8a9380]" size={16} aria-hidden="true" />
-                )}
-              </button>
-            </form>
+                  <span className="mt-0.5 block text-xs font-semibold text-[#587246]">
+                    Recording vote...
+                  </span>
+                ) : null}
+              </span>
+              {votePending ? (
+                <Loader2 className="shrink-0 animate-spin text-[#587246]" size={18} aria-hidden="true" />
+              ) : selected ? (
+                <CheckCircle2 className="shrink-0 text-[#587246]" size={18} aria-hidden="true" />
+              ) : canVote ? (
+                <Vote className="shrink-0 text-[#587246]" size={17} aria-hidden="true" />
+              ) : (
+                <Lock className="shrink-0 text-[#8a9380]" size={16} aria-hidden="true" />
+              )}
+            </button>
           );
         })}
       </div>
@@ -437,23 +432,38 @@ function formatShortDate(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
-function withVoteTimeout(action: Promise<ProposalActionState>) {
-  return new Promise<ProposalActionState>((resolve) => {
-    const timeout = window.setTimeout(() => {
-      resolve({ message: voteTimeoutMessage, ok: false });
-    }, voteRequestTimeoutMs);
+async function castVoteWithFetch(proposalId: string, optionId: string): Promise<ProposalActionState> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => {
+    controller.abort();
+  }, voteRequestTimeoutMs);
 
-    action
-      .then((result) => {
-        window.clearTimeout(timeout);
-        resolve(result);
-      })
-      .catch(() => {
-        window.clearTimeout(timeout);
-        resolve({
-          message: "Your vote could not be recorded. Refresh and try again.",
-          ok: false,
-        });
-      });
-  });
+  try {
+    const response = await fetch("/api/proposals/vote", {
+      body: JSON.stringify({ optionId, proposalId }),
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+      signal: controller.signal,
+    });
+    const payload = (await response.json().catch(() => null)) as ProposalActionState | null;
+
+    if (payload?.message) {
+      return payload;
+    }
+
+    return response.ok
+      ? { message: "Vote recorded.", ok: true }
+      : { message: "Your vote could not be recorded. Refresh and try again.", ok: false };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return { message: voteTimeoutMessage, ok: false };
+    }
+
+    return { message: "Your vote could not be recorded. Refresh and try again.", ok: false };
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
