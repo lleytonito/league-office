@@ -40,6 +40,7 @@ export type FeedProposal = {
     avatar_color?: string | null;
     badges?: IdentityMember["badges"];
     display_name: string;
+    espn_member_id?: string | null;
     id?: string;
     team_name: string | null;
   } | null;
@@ -63,6 +64,7 @@ type VoteRow = {
     avatar_color?: string | null;
     badges?: IdentityMember["badges"];
     display_name: string;
+    espn_member_id?: string | null;
     id?: string;
     team_name: string | null;
   } | null;

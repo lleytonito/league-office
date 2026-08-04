@@ -9,6 +9,7 @@ export type IdentityMember = {
   avatar_color?: string | null;
   badges?: MemberBadge[] | null;
   display_name: string;
+  espn_member_id?: string | null;
   id?: string;
   team_name: string | null;
 };
@@ -58,7 +59,7 @@ export function MemberIdentity({
   return (
     <Link
       className="inline-flex min-w-0 items-center gap-2 rounded-md outline-none transition hover:text-[#315235] focus-visible:ring-2 focus-visible:ring-[#9eb58d]"
-      href={`/members/${member.id}`}
+      href={member.espn_member_id ? `/teams/${encodeURIComponent(member.espn_member_id)}` : `/members/${member.id}`}
     >
       {content}
     </Link>

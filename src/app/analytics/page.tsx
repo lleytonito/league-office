@@ -13,8 +13,10 @@ type Member = {
 };
 
 type AllTimeRankingRow = {
+  averagePoints: number;
   championships: number;
   latestTeamName: string;
+  managerLabel: string;
   placementPoints: number;
   runnerUps: number;
   seasonsPlayed: number;
@@ -85,7 +87,7 @@ export default async function AnalyticsPage() {
               <div>
                 <h2 className="text-xl font-semibold">All-Time Rankings</h2>
                 <p className="mt-1 text-sm leading-6 text-[#626b59]">
-                  Placement points plus 3 for a championship and 1 for runner-up.
+                  Average score per season using placement points, plus 3 for a championship and 1 for runner-up.
                 </p>
               </div>
               {rankingResult?.last_refreshed_at ? (
@@ -112,16 +114,16 @@ export default async function AnalyticsPage() {
                       {index + 1}
                     </span>
                     <div className="min-w-0">
-                      <h3 className="truncate font-semibold text-[#293421]">{row.latestTeamName}</h3>
+                      <h3 className="truncate font-semibold text-[#293421]">{row.managerLabel}</h3>
                       <p className="text-sm text-[#626b59]">
-                        {row.seasonsPlayed} seasons · {row.placementPoints} placement pts
+                        {row.latestTeamName} · {row.seasonsPlayed} seasons · {row.totalPoints} total pts
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-semibold text-[#293421]">{row.totalPoints}</p>
+                      <p className="text-lg font-semibold text-[#293421]">{row.averagePoints}</p>
                       <p className="inline-flex items-center gap-1 text-xs font-semibold text-[#7a5638]">
                         <Trophy size={13} aria-hidden="true" />
-                        {row.championships} / {row.runnerUps}
+                        Champ {row.championships} · RU {row.runnerUps}
                       </p>
                     </div>
                   </article>

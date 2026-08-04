@@ -16,6 +16,7 @@ type EspnTeamRow = {
   espn_member_id: string | null;
   espn_team_id: number;
   logo_url: string | null;
+  owner_display_name: string | null;
   season: number;
   team_name: string;
 };
@@ -48,7 +49,7 @@ export default async function MembersPage() {
         .maybeSingle<HeaderMember>(),
       supabase
         .from("espn_teams")
-        .select("season, espn_member_id, espn_team_id, team_name, logo_url")
+        .select("season, espn_member_id, espn_team_id, owner_display_name, team_name, logo_url")
         .not("espn_member_id", "is", null)
         .order("season", { ascending: false })
         .returns<EspnTeamRow[]>(),
@@ -97,10 +98,17 @@ export default async function MembersPage() {
                   <article className="flex items-center gap-3">
                     <TeamLogo logoUrl={team.logo_url} teamName={team.team_name} />
                     <div className="min-w-0 flex-1">
-                      <h2 className="truncate text-lg font-semibold text-[#293421]">{team.team_name}</h2>
+                      <h2 className="truncate text-lg font-semibold text-[#293421]">
+                        {team.owner_display_name ?? team.team_name}
+                      </h2>
                       <p className="truncate text-sm text-[#626b59]">
-                        {linkedMember ? `Linked to ${linkedMember.display_name}` : "Not linked yet"}
+                        {team.team_name}
                       </p>
+                      {linkedMember ? (
+                        <p className="mt-1 truncate text-xs font-semibold text-[#587246]">
+                          Linked to {linkedMember.display_name}
+                        </p>
+                      ) : null}
                       <span
                         className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
                           linkedMember ? "bg-[#e9eee0] text-[#3e4a36]" : "bg-amber-50 text-amber-800"

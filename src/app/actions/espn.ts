@@ -24,6 +24,14 @@ const linkSchema = z.object({
   memberId: z.string().uuid(),
 });
 
+const selfLinkSchema = z.object({
+  espnMemberId: z.string().trim().min(1),
+});
+
+const removeLinkSchema = z.object({
+  memberId: z.string().uuid(),
+});
+
 export async function refreshEspnAnalyticsAction(
   previousState: EspnActionState = emptyState,
 ): Promise<EspnActionState> {
@@ -98,6 +106,7 @@ export async function refreshEspnAnalyticsAction(
             fetched_at: new Date().toISOString(),
             final_rank: team.finalRank,
             logo_url: team.logoUrl,
+            owner_display_name: team.ownerDisplayName,
             playoff_seed: team.playoffSeed,
             points: team.points,
             raw: seasonData.teams?.find((espnTeam) => espnTeam.id === team.espnTeamId) ?? {},
@@ -198,9 +207,11 @@ export async function refreshEspnAnalyticsAction(
         espn_member_id: detection.espnMemberId,
         espn_team_id: detection.espnTeamId,
         member_id: detection.espnMemberId ? memberByEspnId.get(detection.espnMemberId) ?? null : null,
-        runner_up_espn_member_id: detection.runnerUpEspnMemberId,
-        runner_up_espn_team_id: detection.runnerUpEspnTeamId,
-        runner_up_team_name: detection.runnerUpTeamName,
+          runner_up_espn_member_id: detection.runnerUpEspnMemberId,
+          runner_up_espn_team_id: detection.runnerUpEspnTeamId,
+          owner_display_name: detection.ownerDisplayName,
+          runner_up_owner_display_name: detection.runnerUpOwnerDisplayName,
+          runner_up_team_name: detection.runnerUpTeamName,
         season: detection.season,
         team_name: detection.teamName,
       })),
@@ -268,8 +279,108 @@ export async function linkMemberToEspnTeamAction(
     return { message: error.message, ok: false };
   }
 
+  await refreshDetectedChampionMemberLinks(supabase);
   revalidateAnalyticsPaths();
   return { message: "ESPN team linked.", ok: true };
+}
+
+export async function selectOwnEspnTeamAction(
+  previousState: EspnActionState = emptyState,
+  formData: FormData,
+): Promise<EspnActionState> {
+  void previousState;
+  const supabase = await createClient();
+  const actor = await getCurrentMember(supabase);
+
+  if (!actor?.isActive) {
+    return { message: "You need active league access to select your team.", ok: false };
+  }
+
+  const parsed = selfLinkSchema.safeParse({
+    espnMemberId: stringValue(formData.get("espnMemberId")),
+  });
+
+  if (!parsed.success) {
+    return { message: "Choose your ESPN team.", ok: false };
+  }
+
+  const [{ data: existingLink }, { data: claimedByAnother }, { data: currentTeam }] = await Promise.all([
+    supabase
+      .from("member_team_links")
+      .select("id")
+      .eq("member_id", actor.id)
+      .maybeSingle<{ id: string }>(),
+    supabase
+      .from("member_team_links")
+      .select("member_id")
+      .eq("espn_member_id", parsed.data.espnMemberId)
+      .neq("member_id", actor.id)
+      .maybeSingle<{ member_id: string }>(),
+    supabase
+      .from("espn_teams")
+      .select("season, espn_member_id")
+      .eq("espn_member_id", parsed.data.espnMemberId)
+      .order("season", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ espn_member_id: string; season: number }>(),
+  ]);
+
+  if (existingLink) {
+    return { message: "Your profile is already linked. Ask the commissioner if this needs to change.", ok: false };
+  }
+
+  if (claimedByAnother) {
+    return { message: "That ESPN team is already linked.", ok: false };
+  }
+
+  if (!currentTeam) {
+    return { message: "That ESPN team is not available to select.", ok: false };
+  }
+
+  const { error } = await supabase.from("member_team_links").insert({
+    created_by_member_id: actor.id,
+    espn_member_id: parsed.data.espnMemberId,
+    member_id: actor.id,
+  });
+
+  if (error) {
+    return { message: error.message, ok: false };
+  }
+
+  await refreshDetectedChampionMemberLinks(supabase);
+  revalidateAnalyticsPaths();
+  return { message: "Team linked.", ok: true };
+}
+
+export async function removeMemberTeamLinkAction(
+  previousState: EspnActionState = emptyState,
+  formData: FormData,
+): Promise<EspnActionState> {
+  void previousState;
+  const supabase = await createClient();
+  const actor = await getCurrentMember(supabase);
+
+  if (!actor?.isAdmin) {
+    return { message: "Only admins can remove ESPN team links.", ok: false };
+  }
+
+  const parsed = removeLinkSchema.safeParse({
+    memberId: stringValue(formData.get("memberId")),
+  });
+
+  if (!parsed.success) {
+    return { message: "Choose a linked member.", ok: false };
+  }
+
+  const { error } = await supabase.from("member_team_links").delete().eq("member_id", parsed.data.memberId);
+
+  if (error) {
+    return { message: error.message, ok: false };
+  }
+
+  await refreshDetectedChampionMemberLinks(supabase);
+  revalidateAnalyticsPaths();
+  return { message: "ESPN team link removed.", ok: true };
 }
 
 export async function applyDetectedChampionBadgesAction(
@@ -339,6 +450,35 @@ function revalidateAnalyticsPaths() {
   revalidatePath("/members");
 }
 
+async function refreshDetectedChampionMemberLinks(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+) {
+  const [{ data: links }, { data: detections }] = await Promise.all([
+    supabase
+      .from("member_team_links")
+      .select("member_id, espn_member_id")
+      .returns<Array<{ espn_member_id: string; member_id: string }>>(),
+    supabase
+      .from("championship_detections")
+      .select("season, espn_member_id")
+      .returns<Array<{ espn_member_id: string | null; season: number }>>(),
+  ]);
+  const memberByEspnId = new Map((links ?? []).map((link) => [link.espn_member_id, link.member_id]));
+
+  await Promise.all(
+    (detections ?? []).map((detection) =>
+      supabase
+        .from("championship_detections")
+        .update({
+          member_id: detection.espn_member_id
+            ? memberByEspnId.get(detection.espn_member_id) ?? null
+            : null,
+        })
+        .eq("season", detection.season),
+    ),
+  );
+}
+
 function stringValue(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -388,6 +528,7 @@ async function getCurrentMember(supabase: Awaited<ReturnType<typeof createClient
 
   return {
     id: data.id,
+    isActive: data.is_member && !data.revoked_at,
     isAdmin: data.is_admin && data.is_member && !data.revoked_at,
   };
 }

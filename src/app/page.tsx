@@ -1,5 +1,6 @@
 import { AppHeader } from "@/components/layout/app-header";
 import { HomeActionPanel } from "@/components/feed/home-action-panel";
+import { TeamLinkPrompt } from "@/components/feed/team-link-prompt";
 import { ProposalFeedCard, type FeedProposal } from "@/components/proposals/proposal-feed-card";
 import { badgesForMember, type MemberBadge, type MemberBadgeAward } from "@/lib/members/badges";
 import { createClient } from "@/lib/supabase/server";
@@ -33,6 +34,7 @@ type VoteRow = {
     avatar_color?: string | null;
     badges?: MemberBadge[] | null;
     display_name: string;
+    espn_member_id?: string | null;
     id?: string;
     team_name: string | null;
   } | null;
@@ -42,6 +44,19 @@ type HomeActionsSetting = {
   value: {
     visible?: boolean;
   } | null;
+};
+
+type EspnTeamRow = {
+  espn_member_id: string | null;
+  logo_url: string | null;
+  owner_display_name: string | null;
+  season: number;
+  team_name: string;
+};
+
+type TeamLinkRow = {
+  espn_member_id: string;
+  member_id: string;
 };
 
 const signedInProposalSelect =
@@ -67,7 +82,14 @@ export default async function Home() {
   const isMemberActive = Boolean(member?.is_member && !member.revoked_at);
   const isAdmin = Boolean(member?.is_admin && member.is_member && !member.revoked_at);
 
-  const [announcementsResult, proposalsResult, votesResult, homeActionsResult] = await Promise.all([
+  const [
+    announcementsResult,
+    proposalsResult,
+    votesResult,
+    homeActionsResult,
+    espnTeamsResult,
+    teamLinksResult,
+  ] = await Promise.all([
     supabase
       .from("feed_announcements")
       .select("id, title, body, is_pinned, pinned_at, published_at, created_at")
@@ -100,10 +122,28 @@ export default async function Home() {
       .select("value")
       .eq("key", "home_actions")
       .maybeSingle<HomeActionsSetting>(),
+    member
+      ? supabase
+          .from("espn_teams")
+          .select("season, espn_member_id, owner_display_name, team_name, logo_url")
+          .not("espn_member_id", "is", null)
+          .order("season", { ascending: false })
+          .returns<EspnTeamRow[]>()
+      : Promise.resolve({ data: [] as EspnTeamRow[] }),
+    member
+      ? supabase
+          .from("member_team_links")
+          .select("member_id, espn_member_id")
+          .returns<TeamLinkRow[]>()
+      : Promise.resolve({ data: [] as TeamLinkRow[] }),
   ]);
 
   const announcements = announcementsResult.data ?? [];
   const showHomeActions = homeActionsResult.data?.value?.visible ?? true;
+  const teamLinkPromptOptions =
+    member && isMemberActive && !(teamLinksResult.data ?? []).some((link) => link.member_id === member.id)
+      ? unlinkedCurrentTeams(espnTeamsResult.data ?? [], teamLinksResult.data ?? [])
+      : [];
   const badgeMemberIds = uniqueStrings([
     ...(proposalsResult.data ?? []).map((proposal) => proposal.author?.id),
     ...(votesResult.data ?? []).map((vote) => vote.voter?.id),
@@ -115,16 +155,27 @@ export default async function Home() {
         .in("member_id", badgeMemberIds)
         .returns<MemberBadgeAward[]>()
     : { data: [] as MemberBadgeAward[] };
+  const linkByMemberId = new Map((teamLinksResult.data ?? []).map((link) => [link.member_id, link.espn_member_id]));
   const proposals = (proposalsResult.data ?? []).map((proposal) => ({
     ...proposal,
     author: proposal.author
-      ? { ...proposal.author, badges: badgesForMember(badgeAwards, proposal.author.id) }
+      ? {
+          ...proposal.author,
+          badges: proposal.author.id ? badgesForMember(badgeAwards, proposal.author.id) : [],
+          espn_member_id: proposal.author.id ? linkByMemberId.get(proposal.author.id) ?? null : null,
+        }
       : null,
     options: [...proposal.options].sort((a, b) => a.sort_order - b.sort_order),
   }));
   const votes = (votesResult.data ?? []).map((vote) => ({
     ...vote,
-    voter: vote.voter ? { ...vote.voter, badges: badgesForMember(badgeAwards, vote.voter.id) } : null,
+    voter: vote.voter
+      ? {
+          ...vote.voter,
+          badges: vote.voter.id ? badgesForMember(badgeAwards, vote.voter.id) : [],
+          espn_member_id: vote.voter.id ? linkByMemberId.get(vote.voter.id) ?? null : null,
+        }
+      : null,
   }));
 
   return (
@@ -152,6 +203,8 @@ export default async function Home() {
           ))}
 
           {showHomeActions ? <HomeActionPanel /> : null}
+
+          <TeamLinkPrompt teams={teamLinkPromptOptions} />
 
           {proposals.map((proposal) => (
             <ProposalFeedCard
@@ -189,4 +242,19 @@ export default async function Home() {
 
 function uniqueStrings(values: Array<string | null | undefined>) {
   return [...new Set(values.filter((value): value is string => Boolean(value)))];
+}
+
+function unlinkedCurrentTeams(rows: EspnTeamRow[], links: TeamLinkRow[]) {
+  const latestSeason = rows.length ? Math.max(...rows.map((row) => row.season)) : null;
+  const linkedEspnIds = new Set(links.map((link) => link.espn_member_id));
+
+  return rows
+    .filter((row) => row.season === latestSeason && row.espn_member_id && !linkedEspnIds.has(row.espn_member_id))
+    .map((row) => ({
+      espnMemberId: row.espn_member_id as string,
+      logoUrl: row.logo_url,
+      ownerDisplayName: row.owner_display_name,
+      teamName: row.team_name,
+    }))
+    .sort((a, b) => (a.ownerDisplayName ?? a.teamName).localeCompare(b.ownerDisplayName ?? b.teamName));
 }

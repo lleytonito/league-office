@@ -20,6 +20,7 @@ type EspnTeamRow = {
   espn_team_id: number;
   final_rank: number | null;
   logo_url: string | null;
+  owner_display_name: string | null;
   points: number | null;
   season: number;
   team_name: string;
@@ -81,7 +82,7 @@ export default async function TeamProfilePage({
   ] = await Promise.all([
     supabase
       .from("espn_teams")
-      .select("season, espn_member_id, espn_team_id, team_name, logo_url, final_rank, points")
+      .select("season, espn_member_id, espn_team_id, owner_display_name, team_name, logo_url, final_rank, points")
       .eq("espn_member_id", decodedEspnMemberId)
       .order("season", { ascending: false })
       .returns<EspnTeamRow[]>(),
@@ -99,7 +100,7 @@ export default async function TeamProfilePage({
       : { data: null },
     supabase
       .from("espn_teams")
-      .select("season, espn_member_id, espn_team_id, team_name, logo_url, final_rank, points")
+      .select("season, espn_member_id, espn_team_id, owner_display_name, team_name, logo_url, final_rank, points")
       .returns<EspnTeamRow[]>(),
     supabase
       .from("espn_matchups")
@@ -125,6 +126,7 @@ export default async function TeamProfilePage({
     currentEspnMemberId && currentEspnMemberId !== decodedEspnMemberId
       ? buildHeadToHead(currentKeys, targetKeys, (matchups ?? []).map(normalizeMatchupRow))
       : null;
+  const isOwnTeam = currentEspnMemberId === decodedEspnMemberId;
 
   return (
     <main className="min-h-dvh bg-[#f7f8f4] text-[#111411]">
@@ -140,8 +142,11 @@ export default async function TeamProfilePage({
             <div className="flex items-center gap-4">
               <TeamLogo logoUrl={latestTeam.logo_url} teamName={latestTeam.team_name} />
               <div className="min-w-0">
-                <h1 className="text-3xl font-semibold leading-tight text-[#111411]">{latestTeam.team_name}</h1>
-                <p className="mt-1 text-base text-[#626b59]">
+                <h1 className="text-3xl font-semibold leading-tight text-[#111411]">
+                  {latestTeam.owner_display_name ?? latestTeam.team_name}
+                </h1>
+                <p className="mt-1 text-base text-[#626b59]">{latestTeam.team_name}</p>
+                <p className="mt-1 text-sm text-[#626b59]">
                   {linkedMember ? `Linked to ${linkedMember.display_name}` : "No League Office profile linked yet"}
                 </p>
               </div>
@@ -149,27 +154,29 @@ export default async function TeamProfilePage({
           </div>
         </article>
 
-        <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-2">
-            <Swords className="text-[#587246]" size={18} aria-hidden="true" />
-            <h2 className="text-xl font-semibold">Head to Head</h2>
-          </div>
-          {h2h ? (
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <Stat label="Record" value={`${h2h.wins}-${h2h.losses}${h2h.ties ? `-${h2h.ties}` : ""}`} />
-              <Stat label="Points for" value={h2h.pointsFor.toLocaleString()} />
-              <Stat label="Points against" value={h2h.pointsAgainst.toLocaleString()} />
-              <Stat label="Matchups" value={String(h2h.totalMatchups)} />
-              <Stat label="Avg margin" value={String(h2h.averageMargin)} />
-              <Stat label="Seasons" value={`${h2h.seasons[0]}-${h2h.seasons.at(-1)}`} />
+        {!isOwnTeam ? (
+          <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2">
+              <Swords className="text-[#587246]" size={18} aria-hidden="true" />
+              <h2 className="text-xl font-semibold">Head to Head</h2>
             </div>
-          ) : (
-            <p className="mt-4 rounded-[10px] border border-dashed border-[#d9decf] bg-[#fbfcf8] p-4 text-sm leading-6 text-[#626b59]">
-              <Link2 className="mr-1 inline text-[#8a9380]" size={15} aria-hidden="true" />
-              Link your League Office profile to an ESPN team to see your all-time matchup history here.
-            </p>
-          )}
-        </section>
+            {h2h ? (
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <Stat label="Record" value={`${h2h.wins}-${h2h.losses}${h2h.ties ? `-${h2h.ties}` : ""}`} />
+                <Stat label="Points for" value={h2h.pointsFor.toLocaleString()} />
+                <Stat label="Points against" value={h2h.pointsAgainst.toLocaleString()} />
+                <Stat label="Matchups" value={String(h2h.totalMatchups)} />
+                <Stat label="Avg margin" value={String(h2h.averageMargin)} />
+                <Stat label="Seasons" value={`${h2h.seasons[0]}-${h2h.seasons.at(-1)}`} />
+              </div>
+            ) : (
+              <p className="mt-4 rounded-[10px] border border-dashed border-[#d9decf] bg-[#fbfcf8] p-4 text-sm leading-6 text-[#626b59]">
+                <Link2 className="mr-1 inline text-[#8a9380]" size={15} aria-hidden="true" />
+                Link your League Office profile to an ESPN team to see your all-time matchup history here.
+              </p>
+            )}
+          </section>
+        ) : null}
 
         <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm">
           <div className="flex items-center gap-2">

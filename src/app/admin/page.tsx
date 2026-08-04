@@ -87,6 +87,7 @@ type HomeActionsSetting = {
 
 type EspnTeamRow = {
   espn_member_id: string | null;
+  owner_display_name: string | null;
   season: number;
   team_name: string;
 };
@@ -94,10 +95,15 @@ type EspnTeamRow = {
 type MemberTeamLinkRow = {
   espn_member_id: string;
   member_id: string;
+  member?: {
+    display_name: string;
+    team_name: string | null;
+  } | null;
 };
 
 type ChampionshipDetectionRow = {
   member_id: string | null;
+  owner_display_name: string | null;
   season: number;
   team_name: string;
 };
@@ -175,17 +181,17 @@ export default async function AdminPage() {
         probeEspnLeague(),
         supabase
           .from("espn_teams")
-          .select("season, espn_member_id, team_name")
+          .select("season, espn_member_id, owner_display_name, team_name")
           .not("espn_member_id", "is", null)
           .order("season", { ascending: false })
           .returns<EspnTeamRow[]>(),
         supabase
           .from("member_team_links")
-          .select("member_id, espn_member_id")
+          .select("member_id, espn_member_id, member:league_members(display_name, team_name)")
           .returns<MemberTeamLinkRow[]>(),
         supabase
           .from("championship_detections")
-          .select("season, team_name, member_id")
+          .select("season, team_name, owner_display_name, member_id")
           .order("season", { ascending: false })
           .returns<ChampionshipDetectionRow[]>(),
       ])
@@ -534,17 +540,30 @@ function uniqueStrings(values: Array<string | null | undefined>) {
 }
 
 function buildEspnOwnerOptions(rows: EspnTeamRow[]) {
-  const byMember = new Map<string, { espnMemberId: string; label: string; latestSeason: number }>();
+  const latestSeason = rows.length ? Math.max(...rows.map((row) => row.season)) : null;
+  const byMember = new Map<
+    string,
+    {
+      espnMemberId: string;
+      label: string;
+      latestSeason: number;
+      ownerDisplayName: string | null;
+      teamName: string;
+    }
+  >();
 
-  for (const row of rows) {
+  for (const row of rows.filter((item) => item.season === latestSeason)) {
     if (!row.espn_member_id || byMember.has(row.espn_member_id)) {
       continue;
     }
 
+    const ownerName = row.owner_display_name ?? row.team_name;
     byMember.set(row.espn_member_id, {
       espnMemberId: row.espn_member_id,
-      label: row.team_name,
+      label: `${ownerName} - ${row.team_name}`,
       latestSeason: row.season,
+      ownerDisplayName: row.owner_display_name,
+      teamName: row.team_name,
     });
   }
 

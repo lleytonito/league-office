@@ -13,12 +13,14 @@ describe("ESPN analytics", () => {
     expect(rankings[0]).toMatchObject({
       championships: 1,
       espnMemberId: "b",
+      averagePoints: 4,
       runnerUps: 1,
       totalPoints: 8,
     });
     expect(rankings[1]).toMatchObject({
       championships: 1,
       espnMemberId: "a",
+      averagePoints: 3,
       runnerUps: 0,
       totalPoints: 6,
     });
@@ -57,6 +59,7 @@ function team(overrides: {
     espnTeamId: overrides.espnMemberId === "a" ? 1 : 2,
     finalRank: overrides.finalRank,
     logoUrl: null,
+    ownerDisplayName: overrides.espnMemberId === "a" ? "Manager A" : "Manager B",
     playoffSeed: null,
     points: null,
     season: overrides.season,

@@ -7,7 +7,7 @@ import { memberDisplayName, memberSubtitle } from "@/lib/members/display";
 import { createClient } from "@/lib/supabase/server";
 import { ArrowLeft, Shield, Trophy } from "lucide-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 type HeaderMember = {
   display_name: string;
@@ -39,7 +39,7 @@ export default async function MemberProfilePage({
     return <LoginWall />;
   }
 
-  const [{ data: currentMember }, { data: baseMember }] = await Promise.all([
+  const [{ data: currentMember }, { data: baseMember }, { data: teamLink }] = await Promise.all([
     supabase
       .from("league_members")
       .select("display_name, team_name, is_member, is_admin, revoked_at")
@@ -50,10 +50,19 @@ export default async function MemberProfilePage({
       .select("id, display_name, team_name, profile_bio, avatar_color, is_member, is_admin, revoked_at")
       .eq("id", memberId)
       .maybeSingle<Omit<ProfileMember, "badges">>(),
+    supabase
+      .from("member_team_links")
+      .select("espn_member_id")
+      .eq("member_id", memberId)
+      .maybeSingle<{ espn_member_id: string }>(),
   ]);
 
   if (!baseMember) {
     notFound();
+  }
+
+  if (teamLink?.espn_member_id) {
+    redirect(`/teams/${encodeURIComponent(teamLink.espn_member_id)}`);
   }
 
   const { data: badgeAwards } = await supabase

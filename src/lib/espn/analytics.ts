@@ -6,6 +6,7 @@ export type NormalizedEspnTeam = {
   espnTeamId: number;
   finalRank: number | null;
   logoUrl: string | null;
+  ownerDisplayName: string | null;
   playoffSeed: number | null;
   points: number | null;
   season: number;
@@ -25,6 +26,7 @@ export type NormalizedEspnMatchup = {
 };
 
 export type AllTimeRankingRow = {
+  averagePoints: number;
   championshipBonus: number;
   championships: number;
   espnMemberId: string | null;
@@ -40,8 +42,10 @@ export type AllTimeRankingRow = {
 export type ChampionshipDetection = {
   espnMemberId: string | null;
   espnTeamId: number;
+  ownerDisplayName: string | null;
   runnerUpEspnMemberId: string | null;
   runnerUpEspnTeamId: number | null;
+  runnerUpOwnerDisplayName: string | null;
   runnerUpTeamName: string | null;
   season: number;
   teamName: string;
@@ -59,17 +63,26 @@ export type HeadToHeadSummary = {
 };
 
 export function normalizeTeams(season: number, data: EspnLeagueSeasonData): NormalizedEspnTeam[] {
+  const memberNames = new Map(
+    (data.members ?? [])
+      .filter((member) => member.id)
+      .map((member) => [member.id as string, espnMemberDisplayName(member)]),
+  );
+
   return (data.teams ?? []).flatMap((team) => {
     if (!Number.isFinite(team.id)) {
       return [];
     }
 
+    const espnMemberId = primaryOwnerId(team);
+
     return [{
       abbreviation: team.abbrev ?? null,
-      espnMemberId: primaryOwnerId(team),
+      espnMemberId,
       espnTeamId: team.id,
       finalRank: positiveInteger(team.rankCalculatedFinal) ?? positiveInteger(team.rankFinal),
       logoUrl: team.logo ?? null,
+      ownerDisplayName: espnMemberId ? memberNames.get(espnMemberId) ?? null : null,
       playoffSeed: positiveInteger(team.playoffSeed),
       points: finiteNumber(team.points),
       season,
@@ -118,11 +131,12 @@ export function buildAllTimeRanking(teams: NormalizedEspnTeam[]): AllTimeRanking
     const isChampion = team.finalRank === 1;
     const isRunnerUp = team.finalRank === 2;
     const existing = rows.get(key) ?? {
+      averagePoints: 0,
       championshipBonus: 0,
       championships: 0,
       espnMemberId: team.espnMemberId,
       latestTeamName: team.teamName,
-      managerLabel: team.teamName,
+      managerLabel: team.ownerDisplayName ?? team.teamName,
       placementPoints: 0,
       runnerUpBonus: 0,
       runnerUps: 0,
@@ -131,7 +145,7 @@ export function buildAllTimeRanking(teams: NormalizedEspnTeam[]): AllTimeRanking
     };
 
     existing.latestTeamName = team.teamName;
-    existing.managerLabel = team.teamName;
+    existing.managerLabel = team.ownerDisplayName ?? team.teamName;
     existing.placementPoints += placementPoints;
     existing.championships += isChampion ? 1 : 0;
     existing.runnerUps += isRunnerUp ? 1 : 0;
@@ -139,12 +153,13 @@ export function buildAllTimeRanking(teams: NormalizedEspnTeam[]): AllTimeRanking
     existing.runnerUpBonus += isRunnerUp ? 1 : 0;
     existing.seasonsPlayed += 1;
     existing.totalPoints = existing.placementPoints + existing.championshipBonus + existing.runnerUpBonus;
+    existing.averagePoints = roundOne(existing.totalPoints / existing.seasonsPlayed);
     rows.set(key, existing);
   }
 
   return [...rows.values()].sort((a, b) => {
-    if (b.totalPoints !== a.totalPoints) {
-      return b.totalPoints - a.totalPoints;
+    if (b.averagePoints !== a.averagePoints) {
+      return b.averagePoints - a.averagePoints;
     }
 
     if (b.championships !== a.championships) {
@@ -172,8 +187,10 @@ export function detectChampionships(teams: NormalizedEspnTeam[]): ChampionshipDe
     return [{
       espnMemberId: champion.espnMemberId,
       espnTeamId: champion.espnTeamId,
+      ownerDisplayName: champion.ownerDisplayName,
       runnerUpEspnMemberId: runnerUp?.espnMemberId ?? null,
       runnerUpEspnTeamId: runnerUp?.espnTeamId ?? null,
+      runnerUpOwnerDisplayName: runnerUp?.ownerDisplayName ?? null,
       runnerUpTeamName: runnerUp?.teamName ?? null,
       season,
       teamName: champion.teamName,
@@ -254,6 +271,18 @@ export function teamSeasonKey(season: number, teamId: number) {
 
 function primaryOwnerId(team: EspnTeam) {
   return team.primaryOwner ?? team.owners?.[0] ?? null;
+}
+
+function espnMemberDisplayName(member: {
+  displayName?: string;
+  firstName?: string;
+  lastName?: string;
+}) {
+  return (
+    member.displayName ||
+    [member.firstName, member.lastName].filter(Boolean).join(" ").trim() ||
+    "ESPN manager"
+  );
 }
 
 function finiteNumber(value: unknown) {
