@@ -31,7 +31,6 @@ export function AllTimeRankingsCard({
   rankings: AllTimeRankingRow[];
 }) {
   const [expanded, setExpanded] = useState(false);
-  const visibleRankings = expanded ? rankings : rankings.slice(0, 3);
 
   return (
     <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm">
@@ -57,10 +56,16 @@ export function AllTimeRankingsCard({
 
       {rankings.length ? (
         <>
-          <div className="mt-4 grid gap-2">
-            {visibleRankings.map((row, index) => (
-              <RankingRow index={index} key={`${row.latestTeamName}-${index}`} row={row} />
-            ))}
+          <div
+            className={`mt-4 overflow-hidden transition-[max-height] duration-500 ease-out motion-reduce:transition-none ${
+              expanded ? "max-h-[2400px]" : "max-h-[292px]"
+            }`}
+          >
+            <div className="grid gap-2">
+              {rankings.map((row, index) => (
+                <RankingRow index={index} key={`${row.latestTeamName}-${index}`} row={row} />
+              ))}
+            </div>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">

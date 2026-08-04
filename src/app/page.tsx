@@ -213,14 +213,13 @@ export default async function Home() {
 
           <TeamLinkPrompt teams={teamLinkPromptOptions} />
 
-          {showHomeActions ? <HomeActionPanel /> : null}
-
           {latestLinkedTeam && showLeagueHistoryActions ? (
             <LeagueHistoryPanel
-              ownerDisplayName={latestLinkedTeam.owner_display_name}
               teamName={latestLinkedTeam.team_name}
             />
           ) : null}
+
+          {showHomeActions ? <HomeActionPanel /> : null}
 
           {proposals.map((proposal) => (
             <ProposalFeedCard
