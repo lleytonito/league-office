@@ -26,13 +26,13 @@ export type NormalizedEspnMatchup = {
 };
 
 export type AllTimeRankingRow = {
-  averagePoints: number;
   championshipBonus: number;
   championships: number;
   espnMemberId: string | null;
   latestTeamName: string;
   managerLabel: string;
   placementPoints: number;
+  powerScore: number;
   runnerUpBonus: number;
   runnerUps: number;
   seasonsPlayed: number;
@@ -132,13 +132,13 @@ export function buildAllTimeRanking(teams: NormalizedEspnTeam[]): AllTimeRanking
     const isChampion = team.finalRank === 1;
     const isRunnerUp = team.finalRank === 2;
     const existing = rows.get(key) ?? {
-      averagePoints: 0,
       championshipBonus: 0,
       championships: 0,
       espnMemberId: team.espnMemberId,
       latestTeamName: team.teamName,
       managerLabel: team.ownerDisplayName ?? team.teamName,
       placementPoints: 0,
+      powerScore: 0,
       runnerUpBonus: 0,
       runnerUps: 0,
       seasonsPlayed: 0,
@@ -154,13 +154,13 @@ export function buildAllTimeRanking(teams: NormalizedEspnTeam[]): AllTimeRanking
     existing.runnerUpBonus += isRunnerUp ? 1 : 0;
     existing.seasonsPlayed += 1;
     existing.totalPoints = existing.placementPoints + existing.championshipBonus + existing.runnerUpBonus;
-    existing.averagePoints = roundOne(existing.totalPoints / existing.seasonsPlayed);
+    existing.powerScore = stabilizedPowerScore(existing.totalPoints, existing.seasonsPlayed);
     rows.set(key, existing);
   }
 
   return [...rows.values()].sort((a, b) => {
-    if (b.averagePoints !== a.averagePoints) {
-      return b.averagePoints - a.averagePoints;
+    if (b.powerScore !== a.powerScore) {
+      return b.powerScore - a.powerScore;
     }
 
     if (b.championships !== a.championships) {
@@ -305,4 +305,10 @@ function positiveInteger(value: unknown) {
 
 function roundOne(value: number) {
   return Math.round(value * 10) / 10;
+}
+
+function stabilizedPowerScore(totalPoints: number, seasonsPlayed: number) {
+  const baselineAverage = 6.5;
+  const priorSeasons = 2;
+  return roundOne((totalPoints + baselineAverage * priorSeasons) / (seasonsPlayed + priorSeasons));
 }

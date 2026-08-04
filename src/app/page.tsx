@@ -202,9 +202,9 @@ export default async function Home() {
             </article>
           ))}
 
-          {showHomeActions ? <HomeActionPanel /> : null}
-
           <TeamLinkPrompt teams={teamLinkPromptOptions} />
+
+          {showHomeActions ? <HomeActionPanel /> : null}
 
           {proposals.map((proposal) => (
             <ProposalFeedCard

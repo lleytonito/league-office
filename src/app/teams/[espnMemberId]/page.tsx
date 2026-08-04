@@ -161,14 +161,28 @@ export default async function TeamProfilePage({
               <h2 className="text-xl font-semibold">Head to Head</h2>
             </div>
             {h2h ? (
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <Stat label="Record" value={`${h2h.wins}-${h2h.losses}${h2h.ties ? `-${h2h.ties}` : ""}`} />
-                <Stat label="Points for" value={h2h.pointsFor.toLocaleString()} />
-                <Stat label="Points against" value={h2h.pointsAgainst.toLocaleString()} />
-                <Stat label="Matchups" value={String(h2h.totalMatchups)} />
-                <Stat label="Avg margin" value={String(h2h.averageMargin)} />
-                <Stat label="Seasons" value={`${h2h.seasons[0]}-${h2h.seasons.at(-1)}`} />
-              </div>
+              <HeadToHeadStats
+                averageMargin={String(h2h.averageMargin)}
+                matchups={String(h2h.totalMatchups)}
+                pointsAgainst={h2h.pointsAgainst.toLocaleString()}
+                pointsFor={h2h.pointsFor.toLocaleString()}
+                record={`${h2h.wins}-${h2h.losses}${h2h.ties ? `-${h2h.ties}` : ""}`}
+                seasons={`${h2h.seasons[0]}-${h2h.seasons.at(-1)}`}
+              />
+            ) : currentEspnMemberId ? (
+              <>
+                <HeadToHeadStats
+                  averageMargin="N/A"
+                  matchups="0"
+                  pointsAgainst="N/A"
+                  pointsFor="N/A"
+                  record="0-0"
+                  seasons="N/A"
+                />
+                <p className="mt-3 text-sm leading-6 text-[#626b59]">
+                  No imported ESPN matchups were found for this pairing.
+                </p>
+              </>
             ) : (
               <p className="mt-4 rounded-[10px] border border-dashed border-[#d9decf] bg-[#fbfcf8] p-4 text-sm leading-6 text-[#626b59]">
                 <Link2 className="mr-1 inline text-[#8a9380]" size={15} aria-hidden="true" />
@@ -186,7 +200,7 @@ export default async function TeamProfilePage({
           <div className="mt-4 grid gap-2">
             {targetTeams.map((team) => (
               <p
-                className="flex items-center justify-between gap-3 rounded-[8px] border border-[#e1e5d9] bg-[#fbfcf8] px-3 py-2 text-sm"
+                className={`flex items-center justify-between gap-3 rounded-[8px] border px-3 py-2 text-sm ${finishRowClass(team.final_rank)}`}
                 key={`${team.season}-${team.espn_team_id}`}
               >
                 <span className="font-semibold text-[#293421]">{team.season}</span>
@@ -201,6 +215,22 @@ export default async function TeamProfilePage({
       </section>
     </main>
   );
+}
+
+function finishRowClass(rank: number | null) {
+  if (rank === 1) {
+    return "border-[#d2a33a] bg-[#fff8e4] text-[#6f4d10]";
+  }
+
+  if (rank === 2) {
+    return "border-[#bcc3ca] bg-[#f4f6f7] text-[#4b5560]";
+  }
+
+  if (rank === 3) {
+    return "border-[#c58c5c] bg-[#fff1e7] text-[#70411f]";
+  }
+
+  return "border-[#e1e5d9] bg-[#fbfcf8]";
 }
 
 function normalizeMatchupRow(row: MatchupRow): NormalizedEspnMatchup {
@@ -222,6 +252,33 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div className="rounded-[8px] bg-[#f7f8f4] p-3">
       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#6a725f]">{label}</p>
       <p className="mt-1 text-lg font-semibold text-[#293421]">{value}</p>
+    </div>
+  );
+}
+
+function HeadToHeadStats({
+  averageMargin,
+  matchups,
+  pointsAgainst,
+  pointsFor,
+  record,
+  seasons,
+}: {
+  averageMargin: string;
+  matchups: string;
+  pointsAgainst: string;
+  pointsFor: string;
+  record: string;
+  seasons: string;
+}) {
+  return (
+    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <Stat label="Record" value={record} />
+      <Stat label="Points for" value={pointsFor} />
+      <Stat label="Points against" value={pointsAgainst} />
+      <Stat label="Matchups" value={matchups} />
+      <Stat label="Avg margin" value={averageMargin} />
+      <Stat label="Seasons" value={seasons} />
     </div>
   );
 }

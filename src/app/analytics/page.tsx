@@ -1,5 +1,5 @@
-import { AppHeader } from "@/components/layout/app-header";
 import { LoginWall } from "@/components/auth/login-wall";
+import { AppHeader } from "@/components/layout/app-header";
 import { createClient } from "@/lib/supabase/server";
 import { ArrowLeft, BarChart3, Trophy } from "lucide-react";
 import Link from "next/link";
@@ -13,11 +13,11 @@ type Member = {
 };
 
 type AllTimeRankingRow = {
-  averagePoints: number;
   championships: number;
   latestTeamName: string;
   managerLabel: string;
   placementPoints: number;
+  powerScore: number;
   runnerUps: number;
   seasonsPlayed: number;
   totalPoints: number;
@@ -43,13 +43,11 @@ export default async function AnalyticsPage() {
     return <LoginWall />;
   }
 
-  const { data: member } = user
-    ? await supabase
-        .from("league_members")
-        .select("display_name, team_name, is_member, is_admin, revoked_at")
-        .eq("auth_user_id", user.id)
-        .maybeSingle<Member>()
-    : { data: null };
+  const { data: member } = await supabase
+    .from("league_members")
+    .select("display_name, team_name, is_member, is_admin, revoked_at")
+    .eq("auth_user_id", user.id)
+    .maybeSingle<Member>();
   const { data: rankingResult, error } = await supabase
     .from("analytics_results")
     .select("payload, status, last_refreshed_at")
@@ -61,7 +59,7 @@ export default async function AnalyticsPage() {
 
   return (
     <main className="min-h-dvh bg-[#f7f8f4] text-[#111411]">
-      <AppHeader member={member} userEmail={user?.email ?? null} />
+      <AppHeader member={member} userEmail={user.email ?? null} />
       <section className="mx-auto grid w-full max-w-3xl gap-4 px-4 py-4 sm:px-6">
         <Link className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-[#3e4a36]" href="/">
           <ArrowLeft size={16} aria-hidden="true" />
@@ -87,7 +85,7 @@ export default async function AnalyticsPage() {
               <div>
                 <h2 className="text-xl font-semibold">All-Time Rankings</h2>
                 <p className="mt-1 text-sm leading-6 text-[#626b59]">
-                  Average score per season using placement points, plus 3 for a championship and 1 for runner-up.
+                  Power score blends placement points, championship results, and seasons played.
                 </p>
               </div>
               {rankingResult?.last_refreshed_at ? (
@@ -105,15 +103,9 @@ export default async function AnalyticsPage() {
 
             {rankings.length ? (
               <div className="mt-4 grid gap-2">
-                <div className="hidden grid-cols-[auto_1fr_auto_auto] gap-3 px-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#6a725f] sm:grid">
-                  <span>Rank</span>
-                  <span>Team</span>
-                  <span>Avg</span>
-                  <span>Champ W/L</span>
-                </div>
                 {rankings.map((row, index) => (
                   <article
-                    className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[8px] border border-[#e1e5d9] bg-[#fbfcf8] p-3 sm:grid-cols-[auto_1fr_auto_auto]"
+                    className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[8px] border border-[#e1e5d9] bg-[#fbfcf8] p-3"
                     key={`${row.latestTeamName}-${index}`}
                   >
                     <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#183a2b] text-sm font-semibold text-white">
@@ -124,18 +116,14 @@ export default async function AnalyticsPage() {
                       <p className="text-sm text-[#626b59]">
                         {row.latestTeamName} · {row.seasonsPlayed} seasons · {row.totalPoints} total pts
                       </p>
-                      <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#7a5638] sm:hidden">
+                      <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#7a5638]">
                         <Trophy size={13} aria-hidden="true" />
                         Champ W/L {row.championships}-{row.runnerUps}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-semibold text-[#293421]">{row.averagePoints}</p>
-                      <p className="text-xs font-semibold text-[#6a725f] sm:hidden">avg</p>
-                    </div>
-                    <div className="hidden items-center justify-end gap-1 text-sm font-semibold text-[#7a5638] sm:inline-flex">
-                      <Trophy size={14} aria-hidden="true" />
-                      {row.championships}-{row.runnerUps}
+                      <p className="text-lg font-semibold text-[#293421]">{row.powerScore}</p>
+                      <p className="text-xs font-semibold text-[#6a725f]">PWR</p>
                     </div>
                   </article>
                 ))}

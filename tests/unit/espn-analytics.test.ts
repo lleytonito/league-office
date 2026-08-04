@@ -54,14 +54,14 @@ describe("ESPN analytics", () => {
     expect(rankings[0]).toMatchObject({
       championships: 1,
       espnMemberId: "b",
-      averagePoints: 4,
+      powerScore: 5.3,
       runnerUps: 1,
       totalPoints: 8,
     });
     expect(rankings[1]).toMatchObject({
       championships: 1,
       espnMemberId: "a",
-      averagePoints: 3,
+      powerScore: 4.8,
       runnerUps: 0,
       totalPoints: 6,
     });

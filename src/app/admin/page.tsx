@@ -108,6 +108,13 @@ type ChampionshipDetectionRow = {
   team_name: string;
 };
 
+type EspnMatchupIntegrityRow = {
+  away_score: number | null;
+  home_score: number | null;
+  season: number;
+  winner: string | null;
+};
+
 export default async function AdminPage() {
   const supabase = await createClient();
   const {
@@ -134,6 +141,7 @@ export default async function AdminPage() {
     homeActionsResult,
     espnProbe,
     espnTeamsResult,
+    espnMatchupsResult,
     teamLinksResult,
     championshipDetectionsResult,
   ] = isAdmin
@@ -186,6 +194,10 @@ export default async function AdminPage() {
           .order("season", { ascending: false })
           .returns<EspnTeamRow[]>(),
         supabase
+          .from("espn_matchups")
+          .select("season, winner, home_score, away_score")
+          .returns<EspnMatchupIntegrityRow[]>(),
+        supabase
           .from("member_team_links")
           .select("member_id, espn_member_id, member:league_members!member_team_links_member_id_fkey(display_name, team_name)")
           .returns<MemberTeamLinkRow[]>(),
@@ -204,6 +216,7 @@ export default async function AdminPage() {
         { data: null as HomeActionsSetting | null },
         null as EspnProbeResult | null,
         { data: [] as EspnTeamRow[] },
+        { data: [] as EspnMatchupIntegrityRow[] },
         { data: [] as MemberTeamLinkRow[] },
         { data: [] as ChampionshipDetectionRow[] },
       ];
@@ -252,10 +265,15 @@ export default async function AdminPage() {
     votesResult.error,
     homeActionsResult.error,
     "error" in espnTeamsResult ? espnTeamsResult.error : null,
+    "error" in espnMatchupsResult ? espnMatchupsResult.error : null,
     "error" in teamLinksResult ? teamLinksResult.error : null,
     "error" in championshipDetectionsResult ? championshipDetectionsResult.error : null,
   ].flatMap((error) => (error ? [error.message] : []));
   const espnOwners = buildEspnOwnerOptions(espnTeamsResult.data ?? []);
+  const matchupIntegrity = buildMatchupIntegrity(
+    espnMatchupsResult.data ?? [],
+    espnTeamsResult.data ?? [],
+  );
 
   return (
     <main className="min-h-dvh bg-[#f7f8f4] text-[#111411]">
@@ -305,6 +323,7 @@ export default async function AdminPage() {
             <EspnAnalyticsAdmin
               championshipDetections={championshipDetectionsResult.data ?? []}
               espnOwners={espnOwners}
+              matchupIntegrity={matchupIntegrity}
               links={teamLinksResult.data ?? []}
               members={members.map((directoryMember) => ({
                 display_name: directoryMember.display_name,
@@ -533,6 +552,57 @@ function SystemSafetyPanel({
       </div>
     </section>
   );
+}
+
+function buildMatchupIntegrity(matchups: EspnMatchupIntegrityRow[], teams: EspnTeamRow[]) {
+  const teamCounts = new Map<number, { missingOwnerNames: number; teams: number }>();
+  for (const team of teams) {
+    const existing = teamCounts.get(team.season) ?? { missingOwnerNames: 0, teams: 0 };
+    existing.teams += 1;
+    existing.missingOwnerNames += team.owner_display_name ? 0 : 1;
+    teamCounts.set(team.season, existing);
+  }
+
+  const bySeason = new Map<
+    number,
+    {
+      matchups: number;
+      missingOwnerNames: number;
+      teams: number;
+      undecided: number;
+      zeroZero: number;
+    }
+  >();
+
+  for (const matchup of matchups) {
+    const existing = bySeason.get(matchup.season) ?? {
+      matchups: 0,
+      missingOwnerNames: teamCounts.get(matchup.season)?.missingOwnerNames ?? 0,
+      teams: teamCounts.get(matchup.season)?.teams ?? 0,
+      undecided: 0,
+      zeroZero: 0,
+    };
+    existing.matchups += 1;
+    existing.undecided += matchup.winner === "UNDECIDED" ? 1 : 0;
+    existing.zeroZero += matchup.home_score === 0 && matchup.away_score === 0 ? 1 : 0;
+    bySeason.set(matchup.season, existing);
+  }
+
+  for (const [season, counts] of teamCounts) {
+    if (!bySeason.has(season)) {
+      bySeason.set(season, {
+        matchups: 0,
+        missingOwnerNames: counts.missingOwnerNames,
+        teams: counts.teams,
+        undecided: 0,
+        zeroZero: 0,
+      });
+    }
+  }
+
+  return [...bySeason.entries()]
+    .map(([season, value]) => ({ season, ...value }))
+    .sort((a, b) => b.season - a.season);
 }
 
 function uniqueStrings(values: Array<string | null | undefined>) {

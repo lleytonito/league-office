@@ -79,7 +79,7 @@ export default async function MemberProfilePage({
       <section className="mx-auto grid w-full max-w-3xl gap-4 px-4 py-4 sm:px-6">
         <Link className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-[#3e4a36]" href="/members">
           <ArrowLeft size={16} aria-hidden="true" />
-          Members
+          Teams
         </Link>
 
         <article className="overflow-hidden rounded-[10px] border border-[#d9decf] bg-white shadow-sm">

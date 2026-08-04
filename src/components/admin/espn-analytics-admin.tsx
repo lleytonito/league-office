@@ -41,17 +41,28 @@ type ChampionshipDetection = {
   team_name: string;
 };
 
+type MatchupIntegrityRow = {
+  matchups: number;
+  missingOwnerNames: number;
+  season: number;
+  teams: number;
+  undecided: number;
+  zeroZero: number;
+};
+
 const initialState: EspnActionState = { message: "", ok: false };
 
 export function EspnAnalyticsAdmin({
   championshipDetections,
   espnOwners,
   links,
+  matchupIntegrity,
   members,
 }: {
   championshipDetections: ChampionshipDetection[];
   espnOwners: EspnOwnerOption[];
   links: TeamLink[];
+  matchupIntegrity: MatchupIntegrityRow[];
   members: MemberOption[];
 }) {
   const [refreshState, refreshAction, refreshPending] = useActionState(
@@ -228,6 +239,31 @@ export function EspnAnalyticsAdmin({
         ) : (
           <p className="mt-3 text-sm leading-6 text-[#626b59]">
             Refresh ESPN to detect historical champions.
+          </p>
+        )}
+      </div>
+
+      <div className="mt-5 rounded-[8px] border border-[#e1e5d9] bg-[#fbfcf8] p-4">
+        <h3 className="font-semibold">Matchup integrity</h3>
+        {matchupIntegrity.length ? (
+          <div className="mt-3 grid gap-2 text-sm">
+            {matchupIntegrity.slice(0, 8).map((row) => (
+              <div
+                className="grid grid-cols-[auto_1fr] gap-2 rounded-md bg-white px-3 py-2 text-[#4e5a45] sm:grid-cols-[auto_repeat(5,1fr)]"
+                key={row.season}
+              >
+                <span className="font-semibold text-[#293421]">{row.season}</span>
+                <span>{row.teams} teams</span>
+                <span>{row.matchups} games</span>
+                <span>{row.zeroZero} 0-0</span>
+                <span>{row.undecided} undecided</span>
+                <span>{row.missingOwnerNames} missing names</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm leading-6 text-[#626b59]">
+            Refresh ESPN to populate matchup checks.
           </p>
         )}
       </div>
