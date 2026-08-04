@@ -81,6 +81,7 @@ type VoteRow = {
 
 type HomeActionsSetting = {
   value: {
+    leagueHistoryVisible?: boolean;
     visible?: boolean;
   } | null;
 };
@@ -256,6 +257,7 @@ export default async function AdminPage() {
   }));
   const announcements = announcementResult.data ?? [];
   const homeActionsVisible = homeActionsResult.data?.value?.visible ?? true;
+  const leagueHistoryActionsVisible = homeActionsResult.data?.value?.leagueHistoryVisible ?? true;
   const systemInfo = getSystemInfo();
   const queryErrorMessages = [
     announcementResult.error,
@@ -363,10 +365,13 @@ export default async function AdminPage() {
             <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm">
               <h2 className="text-2xl font-semibold">Home feed actions</h2>
               <p className="mt-2 text-sm leading-6 text-[#626b59]">
-                Controls the short voting note plus the Submit proposal and Last Year&apos;s Rules buttons.
+                Controls the feed helper panels for proposals, rules, teams, and analytics.
               </p>
               <div className="mt-4">
-                <HomeActionsSettingsForm visible={homeActionsVisible} />
+                <HomeActionsSettingsForm
+                  leagueHistoryVisible={leagueHistoryActionsVisible}
+                  visible={homeActionsVisible}
+                />
               </div>
             </section>
 

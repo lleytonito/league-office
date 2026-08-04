@@ -12,6 +12,7 @@ export type SettingsActionState = {
 const emptyState: SettingsActionState = { message: "", ok: false };
 
 const homeActionsSchema = z.object({
+  leagueHistoryVisible: z.boolean(),
   visible: z.boolean(),
 });
 
@@ -28,6 +29,7 @@ export async function updateHomeActionsSettingAction(
   }
 
   const parsed = homeActionsSchema.safeParse({
+    leagueHistoryVisible: formData.get("leagueHistoryVisible") === "on",
     visible: formData.get("visible") === "on",
   });
 
@@ -39,7 +41,10 @@ export async function updateHomeActionsSettingAction(
     {
       key: "home_actions",
       updated_by_member_id: actor.id,
-      value: { visible: parsed.data.visible },
+      value: {
+        leagueHistoryVisible: parsed.data.leagueHistoryVisible,
+        visible: parsed.data.visible,
+      },
     },
     { onConflict: "key" },
   );

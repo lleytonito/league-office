@@ -1,5 +1,6 @@
 import { AppHeader } from "@/components/layout/app-header";
 import { HomeActionPanel } from "@/components/feed/home-action-panel";
+import { LeagueHistoryPanel } from "@/components/feed/league-history-panel";
 import { TeamLinkPrompt } from "@/components/feed/team-link-prompt";
 import { ProposalFeedCard, type FeedProposal } from "@/components/proposals/proposal-feed-card";
 import { badgesForMember, type MemberBadge, type MemberBadgeAward } from "@/lib/members/badges";
@@ -42,6 +43,7 @@ type VoteRow = {
 
 type HomeActionsSetting = {
   value: {
+    leagueHistoryVisible?: boolean;
     visible?: boolean;
   } | null;
 };
@@ -140,6 +142,10 @@ export default async function Home() {
 
   const announcements = announcementsResult.data ?? [];
   const showHomeActions = homeActionsResult.data?.value?.visible ?? true;
+  const showLeagueHistoryActions = homeActionsResult.data?.value?.leagueHistoryVisible ?? true;
+  const linkedCurrentMember = Boolean(
+    member && (teamLinksResult.data ?? []).some((link) => link.member_id === member.id),
+  );
   const teamLinkPromptOptions =
     member && isMemberActive && !(teamLinksResult.data ?? []).some((link) => link.member_id === member.id)
       ? unlinkedCurrentTeams(espnTeamsResult.data ?? [], teamLinksResult.data ?? [])
@@ -205,6 +211,8 @@ export default async function Home() {
           <TeamLinkPrompt teams={teamLinkPromptOptions} />
 
           {showHomeActions ? <HomeActionPanel /> : null}
+
+          {linkedCurrentMember && showLeagueHistoryActions ? <LeagueHistoryPanel /> : null}
 
           {proposals.map((proposal) => (
             <ProposalFeedCard

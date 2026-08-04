@@ -95,13 +95,31 @@ export default async function AnalyticsPage() {
                   </summary>
                   <div className="mt-3 rounded-[8px] border border-[#e1e5d9] bg-[#fbfcf8] p-3 text-sm leading-6 text-[#626b59]">
                     <p>Power score blends placement points, championship results, and seasons played.</p>
-                    <div className="mt-3 grid gap-2 rounded-[8px] bg-white p-3 font-mono text-xs text-[#293421]">
-                      <span>placement = league size - final rank + 1</span>
-                      <span>total = placement + 3 per title + 1 per runner-up</span>
-                      <span>
-                        PWR = (total + {powerFormula.baselineAverage * powerFormula.priorSeasons}) / (seasons +{" "}
-                        {powerFormula.priorSeasons})
-                      </span>
+                    <div className="mt-3 grid gap-3 rounded-[8px] bg-white p-3 text-[#293421]">
+                      <div className="grid gap-1 font-mono text-sm">
+                        <span>PWR = (TP + B × K) / (S + K)</span>
+                        <span>
+                          TP = Σ(L<sub>s</sub> - R<sub>s</sub> + 1) + 3C + RU
+                        </span>
+                      </div>
+                      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs leading-5 text-[#626b59]">
+                        <dt className="font-mono font-semibold text-[#293421]">TP</dt>
+                        <dd>Total points</dd>
+                        <dt className="font-mono font-semibold text-[#293421]">Ls</dt>
+                        <dd>League size in season s</dd>
+                        <dt className="font-mono font-semibold text-[#293421]">Rs</dt>
+                        <dd>Final ESPN rank in season s</dd>
+                        <dt className="font-mono font-semibold text-[#293421]">C</dt>
+                        <dd>Championships</dd>
+                        <dt className="font-mono font-semibold text-[#293421]">RU</dt>
+                        <dd>Runner-up finishes</dd>
+                        <dt className="font-mono font-semibold text-[#293421]">S</dt>
+                        <dd>Seasons played</dd>
+                        <dt className="font-mono font-semibold text-[#293421]">B</dt>
+                        <dd>Baseline average ({powerFormula.baselineAverage})</dd>
+                        <dt className="font-mono font-semibold text-[#293421]">K</dt>
+                        <dd>Baseline seasons ({powerFormula.priorSeasons})</dd>
+                      </dl>
                     </div>
                   </div>
                 </details>
