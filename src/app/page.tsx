@@ -143,9 +143,12 @@ export default async function Home() {
   const announcements = announcementsResult.data ?? [];
   const showHomeActions = homeActionsResult.data?.value?.visible ?? true;
   const showLeagueHistoryActions = homeActionsResult.data?.value?.leagueHistoryVisible ?? true;
-  const linkedCurrentMember = Boolean(
-    member && (teamLinksResult.data ?? []).some((link) => link.member_id === member.id),
-  );
+  const currentTeamLink = member
+    ? (teamLinksResult.data ?? []).find((link) => link.member_id === member.id) ?? null
+    : null;
+  const latestLinkedTeam = currentTeamLink
+    ? (espnTeamsResult.data ?? []).find((team) => team.espn_member_id === currentTeamLink.espn_member_id) ?? null
+    : null;
   const teamLinkPromptOptions =
     member && isMemberActive && !(teamLinksResult.data ?? []).some((link) => link.member_id === member.id)
       ? unlinkedCurrentTeams(espnTeamsResult.data ?? [], teamLinksResult.data ?? [])
@@ -212,7 +215,12 @@ export default async function Home() {
 
           {showHomeActions ? <HomeActionPanel /> : null}
 
-          {linkedCurrentMember && showLeagueHistoryActions ? <LeagueHistoryPanel /> : null}
+          {latestLinkedTeam && showLeagueHistoryActions ? (
+            <LeagueHistoryPanel
+              ownerDisplayName={latestLinkedTeam.owner_display_name}
+              teamName={latestLinkedTeam.team_name}
+            />
+          ) : null}
 
           {proposals.map((proposal) => (
             <ProposalFeedCard
