@@ -3,6 +3,7 @@
 import {
   buildAllTimeRanking,
   detectChampionships,
+  type EspnIdentityAlias,
   normalizeMatchups,
   normalizeTeams,
 } from "@/lib/espn/analytics";
@@ -67,6 +68,7 @@ export async function refreshEspnAnalyticsAction(
   const errors: string[] = [];
   const normalizedTeams = [];
   let seasons: number[] = [];
+  const aliases = await fetchIdentityAliases(supabase);
 
   try {
     seasons = await fetchEspnAvailableSeasons();
@@ -80,7 +82,7 @@ export async function refreshEspnAnalyticsAction(
   for (const season of seasons) {
     try {
       const seasonData = await fetchEspnSeason(season);
-      const seasonTeams = normalizeTeams(season, seasonData);
+      const seasonTeams = normalizeTeams(season, seasonData, aliases);
       const seasonMatchups = normalizeMatchups(season, seasonData);
 
       await supabase.from("espn_league_snapshots").upsert(
@@ -482,6 +484,27 @@ async function refreshDetectedChampionMemberLinks(
         })
         .eq("season", detection.season),
     ),
+  );
+}
+
+async function fetchIdentityAliases(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data } = await supabase
+    .from("espn_identity_aliases")
+    .select("espn_member_id, canonical_espn_member_id, canonical_owner_display_name")
+    .returns<Array<{
+      canonical_espn_member_id: string;
+      canonical_owner_display_name: string;
+      espn_member_id: string;
+    }>>();
+
+  return new Map<string, EspnIdentityAlias>(
+    (data ?? []).map((alias) => [
+      alias.espn_member_id,
+      {
+        canonicalEspnMemberId: alias.canonical_espn_member_id,
+        canonicalOwnerDisplayName: alias.canonical_owner_display_name,
+      },
+    ]),
   );
 }
 

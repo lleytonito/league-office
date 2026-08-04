@@ -13,6 +13,11 @@ export type NormalizedEspnTeam = {
   teamName: string;
 };
 
+export type EspnIdentityAlias = {
+  canonicalEspnMemberId: string;
+  canonicalOwnerDisplayName: string;
+};
+
 export type NormalizedEspnMatchup = {
   awayScore: number | null;
   awayTeamId: number | null;
@@ -62,7 +67,11 @@ export type HeadToHeadSummary = {
   wins: number;
 };
 
-export function normalizeTeams(season: number, data: EspnLeagueSeasonData): NormalizedEspnTeam[] {
+export function normalizeTeams(
+  season: number,
+  data: EspnLeagueSeasonData,
+  aliases = new Map<string, EspnIdentityAlias>(),
+): NormalizedEspnTeam[] {
   const memberNames = new Map(
     (data.members ?? [])
       .filter((member) => member.id)
@@ -74,7 +83,12 @@ export function normalizeTeams(season: number, data: EspnLeagueSeasonData): Norm
       return [];
     }
 
-    const espnMemberId = primaryOwnerId(team);
+    const rawEspnMemberId = primaryOwnerId(team);
+    const alias = rawEspnMemberId ? aliases.get(rawEspnMemberId) : null;
+    const espnMemberId = alias?.canonicalEspnMemberId ?? rawEspnMemberId;
+    const ownerDisplayName =
+      alias?.canonicalOwnerDisplayName ??
+      (rawEspnMemberId ? memberNames.get(rawEspnMemberId) ?? null : null);
 
     return [{
       abbreviation: team.abbrev ?? null,
@@ -82,7 +96,7 @@ export function normalizeTeams(season: number, data: EspnLeagueSeasonData): Norm
       espnTeamId: team.id,
       finalRank: positiveInteger(team.rankCalculatedFinal) ?? positiveInteger(team.rankFinal),
       logoUrl: team.logo ?? null,
-      ownerDisplayName: espnMemberId ? memberNames.get(espnMemberId) ?? null : null,
+      ownerDisplayName,
       playoffSeed: positiveInteger(team.playoffSeed),
       points: finiteNumber(team.points),
       season,

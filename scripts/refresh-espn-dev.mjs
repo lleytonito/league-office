@@ -31,11 +31,12 @@ const errors = [];
 const allTeams = [];
 const allMatchups = [];
 const snapshots = [];
+const aliases = await fetchIdentityAliases();
 
 for (const season of seasons) {
   try {
     const data = await fetchSeason(season);
-    const teams = normalizeTeams(season, data);
+    const teams = normalizeTeams(season, data, aliases);
     const matchups = normalizeMatchups(season, data);
     allTeams.push(...teams);
     allMatchups.push(...matchups);
@@ -74,10 +75,7 @@ const tempDir = mkdtempSync(join(tmpdir(), "league-office-espn-"));
 const sqlPath = join(tempDir, "refresh.sql");
 try {
   writeFileSync(sqlPath, sql);
-  execFileSync(process.platform === "win32" ? "npx.cmd" : "npx", ["supabase", "db", "query", "--linked", "--file", sqlPath], {
-    cwd: process.cwd(),
-    stdio: "inherit",
-  });
+  runSupabaseCli(["db", "query", "--linked", "--file", sqlPath], { stdio: "inherit" });
 } finally {
   rmSync(tempDir, { force: true, recursive: true });
 }
@@ -187,7 +185,7 @@ async function fetchSeason(season) {
   throw new Error(`ESPN returned ${currentResponse.status} for ${season}`);
 }
 
-function normalizeTeams(season, data) {
+function normalizeTeams(season, data, identityAliases = new Map()) {
   const memberNames = new Map(
     (data.members ?? [])
       .filter((member) => member.id)
@@ -196,20 +194,85 @@ function normalizeTeams(season, data) {
 
   return (data.teams ?? []).flatMap((team) => {
     if (!Number.isFinite(team.id)) return [];
-    const espnMemberId = team.primaryOwner ?? team.owners?.[0] ?? null;
+    const rawEspnMemberId = team.primaryOwner ?? team.owners?.[0] ?? null;
+    const alias = rawEspnMemberId ? identityAliases.get(rawEspnMemberId) : null;
+    const espnMemberId = alias?.canonicalEspnMemberId ?? rawEspnMemberId;
+    const ownerDisplayName =
+      alias?.canonicalOwnerDisplayName ??
+      (rawEspnMemberId ? memberNames.get(rawEspnMemberId) ?? null : null);
     return [{
       abbreviation: team.abbrev ?? null,
       espnMemberId,
       espnTeamId: team.id,
       finalRank: positiveInteger(team.rankCalculatedFinal) ?? positiveInteger(team.rankFinal),
       logoUrl: team.logo ?? null,
-      ownerDisplayName: espnMemberId ? memberNames.get(espnMemberId) ?? null : null,
+      ownerDisplayName,
       playoffSeed: positiveInteger(team.playoffSeed),
       points: finiteNumber(team.points),
       season,
       teamName: team.name || `Team ${team.id}`,
     }];
   });
+}
+
+function fetchIdentityAliases() {
+  try {
+    const output = runSupabaseCli(
+      [
+        "db",
+        "query",
+        "--linked",
+        "--output",
+        "json",
+        "select espn_member_id, canonical_espn_member_id, canonical_owner_display_name from public.espn_identity_aliases;",
+      ],
+      { encoding: "utf8" },
+    );
+    const parsed = JSON.parse(extractJsonObject(output));
+    return new Map(
+      (parsed.rows ?? []).map((row) => [
+        row.espn_member_id,
+        {
+          canonicalEspnMemberId: row.canonical_espn_member_id,
+          canonicalOwnerDisplayName: row.canonical_owner_display_name,
+        },
+      ]),
+    );
+  } catch {
+    return new Map();
+  }
+}
+
+function runSupabaseCli(args, options = {}) {
+  if (process.platform !== "win32") {
+    return execFileSync("npx", ["supabase", ...args], { cwd: process.cwd(), ...options });
+  }
+
+  return execFileSync(
+    "powershell.exe",
+    [
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-Command",
+      ["npx", "supabase", ...args.map(powerShellQuote)].join(" "),
+    ],
+    { cwd: process.cwd(), ...options },
+  );
+}
+
+function powerShellQuote(value) {
+  return `'${String(value).replaceAll("'", "''")}'`;
+}
+
+function extractJsonObject(output) {
+  const text = String(output);
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || end < start) {
+    throw new Error("Supabase CLI did not return JSON output.");
+  }
+  return text.slice(start, end + 1);
 }
 
 function normalizeMatchups(season, data) {

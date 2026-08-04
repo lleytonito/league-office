@@ -67,6 +67,36 @@ describe("ESPN analytics", () => {
     });
   });
 
+  it("merges historical ESPN owner aliases into one ranking identity", () => {
+    const aliases = new Map([
+      ["old-owner", {
+        canonicalEspnMemberId: "current-owner",
+        canonicalOwnerDisplayName: "Jorden Morales",
+      }],
+      ["current-owner", {
+        canonicalEspnMemberId: "current-owner",
+        canonicalOwnerDisplayName: "Jorden Morales",
+      }],
+    ]);
+    const oldTeams = normalizeTeams(2024, {
+      members: [{ displayName: "Jorden M", id: "old-owner" }],
+      teams: [{ id: 1, name: "Finding Deebo", primaryOwner: "old-owner", rankCalculatedFinal: 1 }],
+    }, aliases);
+    const currentTeams = normalizeTeams(2025, {
+      members: [{ displayName: "Jorden M", id: "current-owner" }],
+      teams: [{ id: 4, name: "Nabers In Paris", primaryOwner: "current-owner", rankCalculatedFinal: 3 }],
+    }, aliases);
+    const rankings = buildAllTimeRanking([...oldTeams, ...currentTeams]);
+
+    expect(rankings).toHaveLength(1);
+    expect(rankings[0]).toMatchObject({
+      championships: 1,
+      espnMemberId: "current-owner",
+      managerLabel: "Jorden Morales",
+      seasonsPlayed: 2,
+    });
+  });
+
   it("builds head-to-head using season-specific team identities", () => {
     const summary = buildHeadToHead(
       new Set([teamSeasonKey(2024, 1), teamSeasonKey(2025, 4)]),
