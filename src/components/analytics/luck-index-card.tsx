@@ -1,4 +1,7 @@
+"use client";
+
 import { Clover, TrendingDown, TrendingUp } from "lucide-react";
+import { useState } from "react";
 
 export type LuckIndexRow = {
   averageActualRank: number | null;
@@ -20,6 +23,8 @@ export function LuckIndexCard({
   lastRefreshedAt: string | null;
   rows: LuckIndexRow[];
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   return (
     <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -46,34 +51,74 @@ export function LuckIndexCard({
       ) : null}
 
       {rows.length ? (
-        <div className="mt-4 grid gap-2">
-          {rows.map((row, index) => (
-            <LuckRow index={index} key={row.espnMemberId} row={row} />
-          ))}
-        </div>
+        <>
+          <div
+            className={`mt-4 overflow-hidden transition-[max-height] duration-500 ease-out motion-reduce:transition-none ${
+              expanded ? "max-h-[2400px]" : "max-h-[292px]"
+            }`}
+          >
+            <div className="grid gap-2">
+              {rows.map((row, index) => (
+                <LuckRow index={index} key={row.espnMemberId} row={row} />
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {rows.length > 3 ? (
+              <button
+                className="inline-flex h-10 items-center justify-center rounded-full bg-[#183a2b] px-4 text-sm font-semibold text-white transition hover:bg-[#26523e]"
+                onClick={() => setExpanded((current) => !current)}
+                type="button"
+              >
+                {expanded ? "Close" : "View full Luck Index"}
+              </button>
+            ) : null}
+            <details className="group">
+              <summary className="inline-flex h-10 cursor-pointer list-none items-center justify-center rounded-full border border-[#cfd8c4] bg-[#f7f8f4] px-4 text-sm font-semibold text-[#293421] transition hover:bg-[#eef2e8]">
+                <span className="group-open:hidden">Formula</span>
+                <span className="hidden group-open:inline">Hide formula</span>
+              </summary>
+              <FormulaDetails />
+            </details>
+          </div>
+        </>
       ) : (
         <p className="mt-4 rounded-[10px] border border-dashed border-[#d9decf] bg-[#fbfcf8] p-4 text-sm leading-6 text-[#626b59]">
           Luck Index will appear after ESPN analytics are refreshed.
         </p>
       )}
-
-      <details className="group mt-4">
-        <summary className="inline-flex h-10 cursor-pointer list-none items-center justify-center rounded-full border border-[#cfd8c4] bg-[#f7f8f4] px-4 text-sm font-semibold text-[#293421] transition hover:bg-[#eef2e8]">
-          <span className="group-open:hidden">Formula</span>
-          <span className="hidden group-open:inline">Hide formula</span>
-        </summary>
-        <div className="mt-3 rounded-[8px] border border-[#e1e5d9] bg-[#fbfcf8] p-3 text-sm leading-6 text-[#626b59]">
-          <div className="grid gap-2 rounded-[8px] bg-white p-3 text-[#293421]">
-            <p className="font-mono text-sm">Luck = expected rank - final rank</p>
-            <p className="text-sm leading-6 text-[#626b59]">
-              Expected rank is the team&apos;s points-for rank in that season. Positive scores mean a
-              team finished better than its scoring rank; negative scores mean the finish lagged behind
-              its scoring rank.
-            </p>
-          </div>
-        </div>
-      </details>
     </section>
+  );
+}
+
+function FormulaDetails() {
+  return (
+    <div className="mt-3 rounded-[8px] border border-[#e1e5d9] bg-[#fbfcf8] p-3 text-sm leading-6 text-[#626b59]">
+      <div className="grid gap-3 rounded-[8px] bg-white p-3 text-[#293421]">
+        <div className="grid gap-1 font-mono text-sm">
+          <span>Luck = (sum LS<sub>s</sub>) / S</span>
+          <span>LS<sub>s</sub> = ER<sub>s</sub> - FR<sub>s</sub></span>
+          <span>ER<sub>s</sub> = rank(PF<sub>s</sub>)</span>
+        </div>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs leading-5 text-[#626b59]">
+          <dt className="font-mono font-semibold text-[#293421]">LSs</dt>
+          <dd>Luck score for season s</dd>
+          <dt className="font-mono font-semibold text-[#293421]">ERs</dt>
+          <dd>Expected rank from points-for rank among all teams that season</dd>
+          <dt className="font-mono font-semibold text-[#293421]">FRs</dt>
+          <dd>Final ESPN rank for that season</dd>
+          <dt className="font-mono font-semibold text-[#293421]">PFs</dt>
+          <dd>ESPN season points for</dd>
+          <dt className="font-mono font-semibold text-[#293421]">S</dt>
+          <dd>Completed scored seasons for that current active ESPN identity</dd>
+        </dl>
+        <p className="text-sm leading-6 text-[#626b59]">
+          Positive means the team finished better than its scoring rank. Negative means the team
+          scored like a better team than its final finish showed.
+        </p>
+      </div>
+    </div>
   );
 }
 
