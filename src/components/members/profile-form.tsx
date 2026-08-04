@@ -8,7 +8,6 @@ import { useActionState } from "react";
 type EditableProfile = {
   avatar_color: string | null;
   display_name: string;
-  team_name: string | null;
 };
 
 const initialState: ProfileActionState = { message: "", ok: false };
@@ -28,18 +27,6 @@ export function ProfileForm({ member }: { member: EditableProfile }) {
           maxLength={80}
           name="displayName"
           required
-        />
-      </label>
-
-      <label className="grid gap-2 text-sm font-semibold text-[#293421]">
-        Team name
-        <input
-          className="h-11 rounded-md border border-[#d9decf] bg-white px-3 text-base outline-none transition focus:border-[#587246] focus:ring-2 focus:ring-[#d9e5c9]"
-          defaultValue={member.team_name ?? ""}
-          disabled={pending}
-          maxLength={80}
-          name="teamName"
-          placeholder="Add your team name"
         />
       </label>
 

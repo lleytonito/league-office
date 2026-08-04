@@ -89,13 +89,16 @@ export function ProposalFeedCard({
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [optimisticOptionId, setOptimisticOptionId] = useState<string | null>(null);
   const proposalVotes = votes.filter((vote) => vote.proposal_id === proposal.id);
   const userVote = memberId
     ? proposalVotes.find((vote) => vote.voter_member_id === memberId)
     : undefined;
+  const pendingVoteOptionId = userVote ? null : optimisticOptionId;
   const canVote = Boolean(
     isMemberActive &&
       !userVote &&
+      !pendingVoteOptionId &&
       proposal.status === "voting" &&
       proposal.window &&
       !proposal.window.closed_at &&
@@ -203,7 +206,8 @@ export function ProposalFeedCard({
       <div className="mt-5 grid gap-2">
         {counts.map((option) => {
           const percent = totalVotes ? Math.round((option.count / totalVotes) * 100) : 0;
-          const selected = userVote?.option_id === option.id;
+          const selected = (userVote?.option_id ?? pendingVoteOptionId) === option.id;
+          const votePending = pendingVoteOptionId === option.id;
 
           if (canSeeResults) {
             return (
@@ -229,16 +233,38 @@ export function ProposalFeedCard({
           }
 
           return (
-            <form action={castVoteAction} key={option.id}>
+            <form
+              action={async (formData) => {
+                setOptimisticOptionId(option.id);
+                await castVoteAction(formData);
+              }}
+              key={option.id}
+            >
               <input name="proposalId" type="hidden" value={proposal.id} />
               <input name="optionId" type="hidden" value={option.id} />
               <button
-                className="flex min-h-12 w-full items-center justify-between gap-3 rounded-[10px] border border-[#d9decf] bg-white px-3 py-2.5 text-left text-sm font-semibold text-[#293421] transition hover:border-[#587246] hover:bg-[#f4f8ef] disabled:cursor-not-allowed disabled:opacity-60"
+                className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-[10px] border px-3 py-2.5 text-left text-sm font-semibold transition active:scale-[0.99] disabled:cursor-not-allowed ${
+                  selected
+                    ? "vote-selected-pop border-[#587246] bg-[#edf4e6] text-[#293421] shadow-sm ring-2 ring-[#d9e5c9]"
+                    : "border-[#d9decf] bg-white text-[#293421] hover:border-[#587246] hover:bg-[#f4f8ef] disabled:opacity-60"
+                }`}
                 disabled={!canVote}
+                onClick={() => {
+                  if (canVote) {
+                    setOptimisticOptionId(option.id);
+                  }
+                }}
                 type="submit"
               >
-                <span>{option.label}</span>
-                {canVote ? (
+                <span className="min-w-0">
+                  <span className="block truncate">{option.label}</span>
+                  {votePending ? (
+                    <span className="mt-0.5 block text-xs font-semibold text-[#587246]">Recording vote...</span>
+                  ) : null}
+                </span>
+                {selected ? (
+                  <CheckCircle2 className="shrink-0 text-[#587246]" size={18} aria-hidden="true" />
+                ) : canVote ? (
                   <Vote className="shrink-0 text-[#587246]" size={17} aria-hidden="true" />
                 ) : (
                   <Lock className="shrink-0 text-[#8a9380]" size={16} aria-hidden="true" />
@@ -256,7 +282,7 @@ export function ProposalFeedCard({
       ) : !canSeeResults && userVote ? null : !canSeeResults ? (
         <p className="mt-4 flex items-center gap-2 text-sm text-[#6a725f]">
           <BarChart3 size={16} aria-hidden="true" />
-          Results unlock after you vote.
+          {pendingVoteOptionId ? "Saving your vote..." : "Results unlock after you vote."}
         </p>
       ) : proposal.status === "closed" ? (
         <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-[#293421]">

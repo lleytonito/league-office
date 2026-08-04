@@ -3,10 +3,12 @@ import { MemberAvatar } from "@/components/members/member-avatar";
 import { ProfileForm } from "@/components/members/profile-form";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { AppHeader } from "@/components/layout/app-header";
+import { SeasonFinishes } from "@/components/teams/season-finishes";
+import { TeamLogo } from "@/components/teams/team-logo";
 import { attachBadgesToMember, type MemberBadge, type MemberBadgeAward } from "@/lib/members/badges";
-import { memberDisplayName, memberSubtitle } from "@/lib/members/display";
+import { memberDisplayName } from "@/lib/members/display";
 import { createClient } from "@/lib/supabase/server";
-import { ArrowLeft, Eye, Trophy, UserRound } from "lucide-react";
+import { ArrowLeft, Eye, Link2, Trophy, UserRound } from "lucide-react";
 import Link from "next/link";
 
 type Member = {
@@ -19,6 +21,16 @@ type Member = {
   profile_bio: string | null;
   revoked_at: string | null;
   team_name: string | null;
+};
+
+type EspnTeamRow = {
+  espn_member_id: string | null;
+  espn_team_id: number;
+  final_rank: number | null;
+  logo_url: string | null;
+  owner_display_name: string | null;
+  season: number;
+  team_name: string;
 };
 
 export default async function ProfilePage() {
@@ -40,9 +52,25 @@ export default async function ProfilePage() {
         .eq("member_id", baseMember.id)
         .returns<MemberBadgeAward[]>()
     : { data: [] as MemberBadgeAward[] };
+  const { data: teamLink } = baseMember
+    ? await supabase
+        .from("member_team_links")
+        .select("espn_member_id")
+        .eq("member_id", baseMember.id)
+        .maybeSingle<{ espn_member_id: string }>()
+    : { data: null };
+  const { data: linkedTeams } = teamLink?.espn_member_id
+    ? await supabase
+        .from("espn_teams")
+        .select("season, espn_member_id, espn_team_id, owner_display_name, team_name, logo_url, final_rank")
+        .eq("espn_member_id", teamLink.espn_member_id)
+        .order("season", { ascending: false })
+        .returns<EspnTeamRow[]>()
+    : { data: [] as EspnTeamRow[] };
   const member = baseMember
     ? attachBadgesToMember({ ...baseMember, badges: [] as MemberBadge[] }, badgeAwards)
     : null;
+  const latestLinkedTeam = linkedTeams?.[0] ?? null;
 
   const canEdit = Boolean(member?.is_member && !member.revoked_at);
 
@@ -71,7 +99,7 @@ export default async function ProfilePage() {
                     {memberDisplayName(member)}
                   </p>
                   <p className="truncate text-sm text-[#626b59]">
-                    {memberSubtitle(member)}
+                    {member.is_admin ? "Commissioner" : "League member"}
                   </p>
                 </div>
               </div>
@@ -83,6 +111,33 @@ export default async function ProfilePage() {
                   Your membership is not active, so profile editing is paused.
                 </p>
               )}
+
+              <section className="rounded-[10px] border border-[#e1e5d9] bg-[#fbfcf8] p-4">
+                <div className="flex items-center gap-2">
+                  <Link2 className="text-[#587246]" size={18} aria-hidden="true" />
+                  <h2 className="text-lg font-semibold">Linked team</h2>
+                </div>
+                {latestLinkedTeam && teamLink?.espn_member_id ? (
+                  <Link
+                    className="mt-3 flex items-center gap-3 rounded-[10px] border border-[#d9decf] bg-white p-3 transition hover:bg-[#eef2e8]"
+                    href={`/teams/${encodeURIComponent(teamLink.espn_member_id)}`}
+                  >
+                    <TeamLogo logoUrl={latestLinkedTeam.logo_url} teamName={latestLinkedTeam.team_name} />
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold text-[#293421]">
+                        {latestLinkedTeam.owner_display_name ?? latestLinkedTeam.team_name}
+                      </span>
+                      <span className="block truncate text-sm text-[#626b59]">{latestLinkedTeam.team_name}</span>
+                    </span>
+                  </Link>
+                ) : (
+                  <p className="mt-3 rounded-[10px] border border-dashed border-[#d9decf] bg-white p-4 text-sm leading-6 text-[#626b59]">
+                    Please link your team from the main feed.
+                  </p>
+                )}
+              </section>
+
+              {linkedTeams?.length ? <SeasonFinishes teams={linkedTeams} /> : null}
 
               <section className="rounded-[10px] border border-[#e1e5d9] bg-[#fbfcf8] p-4">
                 <div className="flex items-center gap-2">

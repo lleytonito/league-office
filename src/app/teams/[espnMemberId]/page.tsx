@@ -1,8 +1,10 @@
 import { LoginWall } from "@/components/auth/login-wall";
 import { AppHeader } from "@/components/layout/app-header";
+import { SeasonFinishes } from "@/components/teams/season-finishes";
+import { TeamLogo } from "@/components/teams/team-logo";
 import { buildHeadToHead, teamSeasonKey, type NormalizedEspnMatchup } from "@/lib/espn/analytics";
 import { createClient } from "@/lib/supabase/server";
-import { ArrowLeft, Link2, Swords, Trophy } from "lucide-react";
+import { ArrowLeft, Link2, Swords } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -140,7 +142,7 @@ export default async function TeamProfilePage({
         <article className="overflow-hidden rounded-[10px] border border-[#d9decf] bg-white shadow-sm">
           <div className="border-l-4 border-[#587246] p-5 sm:p-6">
             <div className="flex items-center gap-4">
-              <TeamLogo logoUrl={latestTeam.logo_url} teamName={latestTeam.team_name} />
+              <TeamLogo logoUrl={latestTeam.logo_url} size="lg" teamName={latestTeam.team_name} />
               <div className="min-w-0">
                 <h1 className="text-3xl font-semibold leading-tight text-[#111411]">
                   {latestTeam.owner_display_name ?? latestTeam.team_name}
@@ -192,45 +194,10 @@ export default async function TeamProfilePage({
           </section>
         ) : null}
 
-        <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-2">
-            <Trophy className="text-[#b8872f]" size={18} aria-hidden="true" />
-            <h2 className="text-xl font-semibold">Season finishes</h2>
-          </div>
-          <div className="mt-4 grid gap-2">
-            {targetTeams.map((team) => (
-              <p
-                className={`flex items-center justify-between gap-3 rounded-[8px] border px-3 py-2 text-sm ${finishRowClass(team.final_rank)}`}
-                key={`${team.season}-${team.espn_team_id}`}
-              >
-                <span className="font-semibold text-[#293421]">{team.season}</span>
-                <span className="min-w-0 flex-1 truncate text-[#626b59]">{team.team_name}</span>
-                <span className="font-semibold text-[#3e4a36]">
-                  {team.final_rank ? `#${team.final_rank}` : "TBD"}
-                </span>
-              </p>
-            ))}
-          </div>
-        </section>
+        <SeasonFinishes teams={targetTeams} />
       </section>
     </main>
   );
-}
-
-function finishRowClass(rank: number | null) {
-  if (rank === 1) {
-    return "border-[#d2a33a] bg-[#fff8e4] text-[#6f4d10]";
-  }
-
-  if (rank === 2) {
-    return "border-[#bcc3ca] bg-[#f4f6f7] text-[#4b5560]";
-  }
-
-  if (rank === 3) {
-    return "border-[#c58c5c] bg-[#fff1e7] text-[#70411f]";
-  }
-
-  return "border-[#e1e5d9] bg-[#fbfcf8]";
 }
 
 function normalizeMatchupRow(row: MatchupRow): NormalizedEspnMatchup {
@@ -280,24 +247,5 @@ function HeadToHeadStats({
       <Stat label="Avg margin" value={averageMargin} />
       <Stat label="Seasons" value={seasons} />
     </div>
-  );
-}
-
-function TeamLogo({ logoUrl, teamName }: { logoUrl: string | null; teamName: string }) {
-  if (logoUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        alt=""
-        className="h-16 w-16 shrink-0 rounded-full border border-[#d9decf] bg-[#f7f8f4] object-cover"
-        src={logoUrl}
-      />
-    );
-  }
-
-  return (
-    <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[#183a2b] text-lg font-semibold text-white">
-      {teamName.slice(0, 2).toUpperCase()}
-    </span>
   );
 }

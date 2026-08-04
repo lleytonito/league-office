@@ -14,8 +14,6 @@ const emptyState: ProfileActionState = { message: "", ok: false };
 const profileSchema = z.object({
   avatarColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
   displayName: z.string().trim().min(1).max(80),
-  profileBio: z.string().trim().max(280).optional(),
-  teamName: z.string().trim().max(80).optional(),
 });
 
 const adminMemberProfileSchema = z.object({
@@ -38,12 +36,10 @@ export async function updateOwnProfileAction(
   const parsed = profileSchema.safeParse({
     avatarColor: stringValue(formData.get("avatarColor")) || "#183a2b",
     displayName: stringValue(formData.get("displayName")),
-    profileBio: stringValue(formData.get("profileBio")),
-    teamName: stringValue(formData.get("teamName")),
   });
 
   if (!parsed.success) {
-    return { message: "Check your name, team, and profile details.", ok: false };
+    return { message: "Check your display name and avatar color.", ok: false };
   }
 
   const { error } = await supabase
@@ -51,8 +47,6 @@ export async function updateOwnProfileAction(
     .update({
       avatar_color: parsed.data.avatarColor,
       display_name: parsed.data.displayName,
-      profile_bio: parsed.data.profileBio || null,
-      team_name: parsed.data.teamName || null,
     })
     .eq("id", member.id);
 

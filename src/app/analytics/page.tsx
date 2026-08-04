@@ -33,6 +33,11 @@ type AnalyticsResult = {
   status: string;
 };
 
+const powerFormula = {
+  baselineAverage: 6.5,
+  priorSeasons: 2,
+};
+
 export default async function AnalyticsPage() {
   const supabase = await createClient();
   const {
@@ -70,7 +75,6 @@ export default async function AnalyticsPage() {
             <BarChart3 className="text-[#587246]" size={22} aria-hidden="true" />
             <div>
               <h1 className="text-2xl font-semibold">Analytics</h1>
-              <p className="mt-1 text-sm text-[#626b59]">League history, refreshed from ESPN.</p>
             </div>
           </div>
         </header>
@@ -84,9 +88,23 @@ export default async function AnalyticsPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold">All-Time Rankings</h2>
-                <p className="mt-1 text-sm leading-6 text-[#626b59]">
-                  Power score blends placement points, championship results, and seasons played.
-                </p>
+                <details className="group mt-1">
+                  <summary className="cursor-pointer list-none text-sm font-semibold text-[#587246] transition hover:text-[#3e4a36]">
+                    <span className="group-open:hidden">Click for details</span>
+                    <span className="hidden group-open:inline">Hide details</span>
+                  </summary>
+                  <div className="mt-3 rounded-[8px] border border-[#e1e5d9] bg-[#fbfcf8] p-3 text-sm leading-6 text-[#626b59]">
+                    <p>Power score blends placement points, championship results, and seasons played.</p>
+                    <div className="mt-3 grid gap-2 rounded-[8px] bg-white p-3 font-mono text-xs text-[#293421]">
+                      <span>placement = league size - final rank + 1</span>
+                      <span>total = placement + 3 per title + 1 per runner-up</span>
+                      <span>
+                        PWR = (total + {powerFormula.baselineAverage * powerFormula.priorSeasons}) / (seasons +{" "}
+                        {powerFormula.priorSeasons})
+                      </span>
+                    </div>
+                  </div>
+                </details>
               </div>
               {rankingResult?.last_refreshed_at ? (
                 <span className="rounded-full bg-[#e9eee0] px-3 py-1 text-xs font-semibold text-[#3e4a36]">

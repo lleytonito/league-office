@@ -33,3 +33,21 @@ summary {
 ::selection {
   background: #d8e5c9;
 }
+
+.vote-selected-pop {
+  animation: vote-pop 260ms ease-out;
+}
+
+@keyframes vote-pop {
+  0% {
+    transform: scale(0.985);
+  }
+
+  70% {
+    transform: scale(1.01);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
