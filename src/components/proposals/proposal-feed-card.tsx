@@ -96,9 +96,15 @@ export function ProposalFeedCard({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [optimisticOptionId, setOptimisticOptionId] = useState<string | null>(null);
+  const [confirmedVote, setConfirmedVote] = useState<VoteRow | null>(null);
   const [submittingOptionId, setSubmittingOptionId] = useState<string | null>(null);
   const [voteState, setVoteState] = useState<ProposalActionState>({ message: "", ok: false });
-  const proposalVotes = votes.filter((vote) => vote.proposal_id === proposal.id);
+  const proposalVotes = [
+    ...votes.filter((vote) => vote.proposal_id === proposal.id),
+    ...(confirmedVote && !votes.some((vote) => vote.voter_member_id === confirmedVote.voter_member_id)
+      ? [confirmedVote]
+      : []),
+  ];
   const userVote = memberId
     ? proposalVotes.find((vote) => vote.voter_member_id === memberId)
     : undefined;
@@ -123,7 +129,7 @@ export function ProposalFeedCard({
   const resultText = closedResultText(counts, proposal.passed, totalVotes);
   const detailsId = `proposal-details-${proposal.id}`;
   async function handleVote(optionId: string) {
-    if (!canVote) {
+    if (!canVote || !memberId) {
       return;
     }
 
@@ -136,6 +142,12 @@ export function ProposalFeedCard({
       setVoteState(result);
 
       if (result.ok) {
+        setConfirmedVote({
+          option_id: optionId,
+          proposal_id: proposal.id,
+          voter: null,
+          voter_member_id: memberId,
+        });
         router.refresh();
         return;
       }

@@ -24,6 +24,31 @@ afterEach(() => {
 });
 
 describe("ProposalFeedCard voting feedback", () => {
+  it("shows confirmed results immediately after the vote API succeeds", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+      json: async () => ({ message: "Vote recorded.", ok: true }),
+      ok: true,
+    } as Response);
+
+    render(
+      <ProposalFeedCard
+        isAdmin={false}
+        isMemberActive={true}
+        memberId="member-1"
+        proposal={proposalFixture}
+        votes={[]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Looks good/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText("1 / 100%")).toBeInTheDocument();
+    });
+    expect(screen.getByText("0 / 0%")).toBeInTheDocument();
+    expect(routerMocks.refresh).toHaveBeenCalledOnce();
+  });
+
   it("rolls back optimistic selection and shows an error when voting fails", async () => {
     const votePromise = deferred<{ message: string; ok: boolean }>();
     vi.spyOn(globalThis, "fetch").mockReturnValueOnce(
