@@ -256,11 +256,26 @@ function HistoricalRankingSlide({ slide }: { slide: HomeAnalyticsSlide }) {
           ) : null}
         </div>
         <div className="relative flex h-[104px] w-[122px] items-center justify-center">
-          <div className="absolute inset-y-2 inset-x-0 rounded-[28px] border border-[#b59657] bg-[#494236] shadow-[inset_0_0_0_1px_rgba(238,224,180,0.18)]" />
-          <div className="absolute left-3 top-1/2 h-9 w-px -translate-y-1/2 bg-[#b59657]/55" />
-          <div className="absolute right-3 top-1/2 h-9 w-px -translate-y-1/2 bg-[#b59657]/55" />
-          <div className="absolute inset-x-7 top-5 h-px bg-[#766f5b]" />
-          <div className="absolute inset-x-7 bottom-5 h-px bg-[#766f5b]" />
+          <svg
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full drop-shadow-sm"
+            fill="none"
+            viewBox="0 0 122 104"
+          >
+            <path
+              d="M21 8H101L116 23V81L101 96H21L6 81V23L21 8Z"
+              fill="#494236"
+              stroke="#B59657"
+              strokeWidth="1.2"
+            />
+            <path
+              d="M28 20H94L105 31V73L94 84H28L17 73V31L28 20Z"
+              stroke="#766F5B"
+              strokeWidth="1"
+            />
+            <path d="M34 29H88" stroke="#6A6251" strokeLinecap="round" strokeWidth="1" />
+            <path d="M34 75H88" stroke="#6A6251" strokeLinecap="round" strokeWidth="1" />
+          </svg>
           <span className="relative text-5xl font-semibold leading-none text-white drop-shadow-sm">
             {slide.value}
           </span>
