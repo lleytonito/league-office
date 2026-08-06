@@ -294,12 +294,7 @@ function TeamSummarySlide({ slide }: { slide: HomeAnalyticsSlide }) {
     <div className="relative block min-h-[158px] rounded-[8px] bg-[#4b382b] text-[#f2e8d3]">
       <div className="absolute inset-0 rounded-[8px] border border-[#8a6a4c]" />
       <div className="pointer-events-none absolute inset-x-4 top-4 h-px bg-[#b59657]/60" />
-      <div className="pointer-events-none absolute right-4 top-4 flex gap-1">
-        <span className="h-1.5 w-1.5 rounded-full bg-[#b59657]" />
-        <span className="h-1.5 w-1.5 rounded-full bg-[#b59657]/70" />
-        <span className="h-1.5 w-1.5 rounded-full bg-[#b59657]/45" />
-      </div>
-      <div className="relative grid min-h-[158px] content-between gap-3 p-4">
+      <div className="relative grid min-h-[158px] content-between gap-2 p-4">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b59657]">{slide.label}</p>
           <Link
@@ -310,9 +305,7 @@ function TeamSummarySlide({ slide }: { slide: HomeAnalyticsSlide }) {
           >
             {slide.title}
           </Link>
-          <div className="mt-3 h-px w-full bg-[#b59657]/70">
-            <div className="mx-auto h-[3px] w-8 -translate-y-px rounded-full bg-[#b59657]" />
-          </div>
+          <div className="mt-3 h-px w-full bg-[#b59657]/65" />
         </div>
 
         <div className="grid grid-cols-2 gap-2">
@@ -333,16 +326,18 @@ function TeamStatTile({
 }) {
   const contents = (
     <>
-      <p className={`truncate font-semibold leading-none ${emphasis ? "text-3xl text-[#f2e8d3]" : "text-lg text-[#f2e8d3]"}`}>
+      <p className={`font-semibold leading-none text-[#f2e8d3] ${teamStatValueClass(stat.value, emphasis)}`}>
         {stat.value}
       </p>
-      <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.13em] text-[#c9bca4]">{stat.label}</p>
+      <p className="mt-1 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.1em] text-[#c9bca4]">
+        {stat.label}
+      </p>
       {stat.detail ? <p className="mt-1 truncate text-[11px] font-semibold text-[#b59657]">{stat.detail}</p> : null}
     </>
   );
 
   const className =
-    "min-h-[70px] rounded-[8px] border border-[#8a6a4c] bg-[#735a43]/58 p-3 shadow-[inset_0_1px_0_rgba(242,232,211,0.08)] transition hover:bg-[#735a43]/75";
+    "min-h-[64px] rounded-[8px] border border-[#8a6a4c] bg-[#735a43]/58 p-3 shadow-[inset_0_1px_0_rgba(242,232,211,0.08)] transition hover:bg-[#735a43]/75";
 
   return stat.href ? (
     <Link className={className} href={stat.href}>
@@ -363,6 +358,22 @@ function teamTitleClass(title: string) {
   }
 
   return "text-3xl";
+}
+
+function teamStatValueClass(value: string, emphasis: boolean) {
+  if (emphasis) {
+    return value.length > 5 ? "text-[1.55rem]" : "text-3xl";
+  }
+
+  if (value.length > 18) {
+    return "text-[0.95rem]";
+  }
+
+  if (value.length > 14) {
+    return "text-base";
+  }
+
+  return "text-lg";
 }
 
 function StatTile({

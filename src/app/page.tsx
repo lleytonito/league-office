@@ -344,13 +344,6 @@ function buildHomeAnalyticsSlides({
         targetTeams: linkedTeams.map(normalizeTeamRow),
       })
     : null;
-  const favoriteOpponentDetail = eraSummary?.favoriteOpponent
-    ? formatH2hRecord(
-        eraSummary.favoriteOpponent.wins,
-        eraSummary.favoriteOpponent.losses,
-        eraSummary.favoriteOpponent.ties,
-      )
-    : undefined;
   const slides: HomeAnalyticsSlide[] = [
     {
       href: `/teams/${encodeURIComponent(espnMemberId)}`,
@@ -359,11 +352,10 @@ function buildHomeAnalyticsSlides({
       stats: [
         { label: "Avg finish", value: eraSummary?.averageFinish ? `#${eraSummary.averageFinish}` : "N/A" },
         {
-          detail: favoriteOpponentDetail,
           href: eraSummary?.favoriteOpponent?.espnMemberId
             ? `/teams/${encodeURIComponent(eraSummary.favoriteOpponent.espnMemberId)}`
             : undefined,
-          label: "Favorite opponent",
+          label: "Best matchup",
           value: eraSummary?.favoriteOpponent?.managerLabel ?? "N/A",
         },
       ],
@@ -449,10 +441,6 @@ function normalizeMatchupRow(row: MatchupRow): NormalizedEspnMatchup {
 function findRank(rows: AnalyticsResultRow["payload"]["rankings"], espnMemberId: string) {
   const index = (rows ?? []).findIndex((row) => row.espnMemberId === espnMemberId);
   return index >= 0 ? { index, row: (rows ?? [])[index] } : null;
-}
-
-function formatH2hRecord(wins: number, losses: number, ties: number) {
-  return ties ? `${wins}-${losses}-${ties} H2H` : `${wins}-${losses} H2H`;
 }
 
 function uniqueStrings(values: Array<string | null | undefined>) {
