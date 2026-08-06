@@ -7,6 +7,7 @@ export type ChampionshipAccolade = {
 };
 
 export type RankingAccolade = {
+  category: string;
   label: string;
   rank: number;
 };
@@ -68,10 +69,10 @@ export function TeamAccolades({
             <article className="rounded-[9px] border border-[#b9d6e6] bg-[#eef8fc] p-3" key={accolade.label}>
               <div className="flex items-center gap-2 text-sm font-semibold text-[#293421]">
                 <Award className="text-[#2f6f8f]" size={15} aria-hidden="true" />
-                Top 3
+                {accolade.label}
               </div>
               <p className="mt-2 text-2xl font-semibold text-[#293421]">#{accolade.rank}</p>
-              <p className="mt-1 text-sm leading-6 text-[#626b59]">{accolade.label}</p>
+              <p className="mt-1 text-sm leading-6 text-[#626b59]">{accolade.category}</p>
             </article>
           ))}
 

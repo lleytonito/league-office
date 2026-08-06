@@ -299,10 +299,10 @@ function normalizeMatchupRow(row: MatchupRow): NormalizedEspnMatchup {
 
 function rankingAccoladesForTeam(results: Map<string, AnalyticsResultRow>, espnMemberId: string) {
   return [
-    rankingAccolade(results.get("all-time-rankings")?.payload.rankings, espnMemberId, "Historical Power"),
+    rankingAccolade(results.get("all-time-rankings")?.payload.rankings, espnMemberId, "All-Time Rankings"),
     rankingAccolade(results.get("average-points")?.payload.rankings, espnMemberId, "Average Points Scored"),
     rankingAccolade(results.get("luck-index")?.payload.luckIndex, espnMemberId, "Luck Index"),
-  ].filter((accolade): accolade is { label: string; rank: number } => Boolean(accolade));
+  ].filter((accolade): accolade is { category: string; label: string; rank: number } => Boolean(accolade));
 }
 
 function rankingAccolade(
@@ -311,5 +311,5 @@ function rankingAccolade(
   label: string,
 ) {
   const index = (rows ?? []).findIndex((row) => row.espnMemberId === espnMemberId);
-  return index >= 0 && index < 3 ? { label, rank: index + 1 } : null;
+  return index >= 0 && index < 3 ? { category: "Historical Rankings", label, rank: index + 1 } : null;
 }

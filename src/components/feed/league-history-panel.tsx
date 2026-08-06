@@ -99,7 +99,7 @@ export function LeagueHistoryPanel({
                     {activeSlide.label}
                   </p>
                   <Link
-                    className="mt-1 inline-flex max-w-full items-center truncate text-lg font-semibold text-white underline decoration-white/70 decoration-2 underline-offset-4 transition hover:decoration-white"
+                    className="-mx-1 mt-1 inline-flex max-w-full items-center truncate rounded-[6px] px-1 text-lg font-semibold text-white transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/75"
                     href={activeSlide.href}
                   >
                     {activeSlide.title}
@@ -173,14 +173,14 @@ export function LeagueHistoryPanel({
 
         <div className="grid grid-cols-2 gap-2 min-[520px]:w-[260px]">
           <Link
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[#c8d1be] bg-white px-3 text-sm font-semibold text-[#293421] transition hover:bg-[#f7f8f4]"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[#aeb9a4] bg-[#e8ede2] px-3 text-sm font-semibold text-[#293421] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] transition hover:bg-[#dfe7d8]"
             href="/members"
           >
             <UsersRound size={17} aria-hidden="true" />
             View Teams
           </Link>
           <Link
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[#c8d1be] bg-white px-3 text-sm font-semibold text-[#293421] transition hover:bg-[#f7f8f4]"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[#aeb9a4] bg-[#e8ede2] px-3 text-sm font-semibold text-[#293421] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] transition hover:bg-[#dfe7d8]"
             href="/analytics"
           >
             <BarChart3 size={17} aria-hidden="true" />
