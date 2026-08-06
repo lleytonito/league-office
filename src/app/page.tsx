@@ -393,13 +393,19 @@ function buildHomeAnalyticsSlides({
   for (const record of leagueRecords) {
     slides.push({
       href: "/analytics?metric=accolades#accolades",
+      kind: record.id === "biggest-blowout" ? "biggestBlowout" : undefined,
       label: "Accolade",
       rankLabel: record.valueLabel,
       title: record.title,
       meta: `${record.holderLabel} - ${record.matchupLabel}`,
       stats: [
-        { label: "Holder", value: record.holderLabel.split(" ")[0] ?? record.holderLabel },
+        {
+          label: "Holder",
+          value: record.id === "biggest-blowout" ? record.holderLabel : (record.holderLabel.split(" ")[0] ?? record.holderLabel),
+        },
+        { label: "Opponent", value: record.opponentLabel ?? "Opponent" },
         { label: "Score", value: record.scoreLine ?? record.valueLabel },
+        { label: "Date", value: record.matchupLabel },
       ],
       tone: record.id === "biggest-blowout" ? "red" : record.id === "most-points-game" ? "blue" : "slate",
       value: "Record",

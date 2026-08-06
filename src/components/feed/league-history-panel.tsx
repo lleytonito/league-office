@@ -8,7 +8,7 @@ import { useRef, useState } from "react";
 export type HomeAnalyticsSlide = {
   cta?: string;
   href: string;
-  kind?: "historicalRanking" | "metric" | "team";
+  kind?: "biggestBlowout" | "historicalRanking" | "metric" | "team";
   label: string;
   logoUrl?: string | null;
   meta?: string;
@@ -87,7 +87,9 @@ export function LeagueHistoryPanel({
                 activeSlide.kind === "historicalRanking"
                   ? "border-[#8c8266] bg-[#837b67] p-[2px]"
                   : activeSlide.kind === "team"
-                    ? "border-[#8a6a4c] bg-[#3f3027] p-[2px]"
+                    ? "border-[#8c8266] bg-[#837b67] p-[2px]"
+                    : activeSlide.kind === "biggestBlowout"
+                      ? "border-[#a46a54] bg-[#7f4638] p-[2px]"
                   : `${slideTone(activeSlide.tone)} p-3`
               }`}
               key={`${activeSlide.title}-${index}`}
@@ -97,6 +99,8 @@ export function LeagueHistoryPanel({
                 <HistoricalRankingSlide slide={activeSlide} />
               ) : activeSlide.kind === "team" ? (
                 <TeamSummarySlide slide={activeSlide} />
+              ) : activeSlide.kind === "biggestBlowout" ? (
+                <BiggestBlowoutSlide slide={activeSlide} />
               ) : (
                 <>
                   <div className="flex items-start gap-3">
@@ -291,14 +295,15 @@ function TeamSummarySlide({ slide }: { slide: HomeAnalyticsSlide }) {
   const [firstStat, secondStat] = slide.stats ?? [];
 
   return (
-    <div className="relative block min-h-[158px] rounded-[8px] bg-[#4b382b] text-[#f2e8d3]">
-      <div className="absolute inset-0 rounded-[8px] border border-[#8a6a4c]" />
-      <div className="pointer-events-none absolute inset-x-4 top-4 h-px bg-[#b59657]/60" />
+    <div className="relative block min-h-[158px] rounded-[8px] bg-[#eef0e7] text-[#1a2119]">
+      <div className="absolute inset-0 rounded-[8px] border border-[#d1c49a]" />
+      <div className="pointer-events-none absolute inset-x-4 top-3 h-px bg-[#b59657]/70" />
+      <div className="pointer-events-none absolute inset-x-4 bottom-3 h-px bg-[#b59657]/40" />
       <div className="relative grid min-h-[158px] content-between gap-2 p-4">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b59657]">{slide.label}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6d5137]">{slide.label}</p>
           <Link
-            className={`mt-3 block max-w-full truncate rounded-[6px] font-semibold leading-[1.02] text-[#f2e8d3] outline-none transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b59657] ${
+            className={`mt-3 block max-w-full truncate rounded-[6px] font-semibold leading-[1.02] text-[#4b382b] outline-none transition hover:text-[#2e221b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b59657] ${
               teamTitleClass(slide.title)
             }`}
             href={slide.href}
@@ -329,7 +334,7 @@ function TeamStatTile({
       <p className={`font-semibold leading-none text-[#f2e8d3] ${teamStatValueClass(stat.value, emphasis)}`}>
         {stat.value}
       </p>
-      <p className="mt-1 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.1em] text-[#c9bca4]">
+      <p className="mt-1 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.1em] text-[#d3c5ae]">
         {stat.label}
       </p>
       {stat.detail ? <p className="mt-1 truncate text-[11px] font-semibold text-[#b59657]">{stat.detail}</p> : null}
@@ -337,7 +342,7 @@ function TeamStatTile({
   );
 
   const className =
-    "min-h-[64px] rounded-[8px] border border-[#8a6a4c] bg-[#735a43]/58 p-3 shadow-[inset_0_1px_0_rgba(242,232,211,0.08)] transition hover:bg-[#735a43]/75";
+    "min-h-[64px] rounded-[8px] border border-[#8a6a4c] bg-[#5a4231] p-3 shadow-[inset_0_1px_0_rgba(242,232,211,0.08)] transition hover:bg-[#654b38]";
 
   return stat.href ? (
     <Link className={className} href={stat.href}>
@@ -374,6 +379,72 @@ function teamStatValueClass(value: string, emphasis: boolean) {
   }
 
   return "text-lg";
+}
+
+function BiggestBlowoutSlide({ slide }: { slide: HomeAnalyticsSlide }) {
+  const holder = slide.stats?.find((stat) => stat.label === "Holder")?.value ?? "Record holder";
+  const opponent = slide.stats?.find((stat) => stat.label === "Opponent")?.value ?? "Opponent";
+  const scoreLine = slide.stats?.find((stat) => stat.label === "Score")?.value ?? "";
+  const [holderScore = "", opponentScore = ""] = scoreLine.split("-").map((score) => score.trim());
+  const dateLabel = slide.stats?.find((stat) => stat.label === "Date")?.value ?? "";
+
+  return (
+    <Link
+      className="relative block min-h-[158px] rounded-[8px] bg-[#eef0e7] text-[#1a2119] outline-none transition hover:scale-[1.003] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c7924b]"
+      href={slide.href}
+    >
+      <div className="absolute inset-0 rounded-[8px] border border-[#ddb9a6]" />
+      <div className="pointer-events-none absolute inset-x-4 top-3 h-px bg-[#c7924b]/75" />
+      <div className="pointer-events-none absolute inset-x-4 bottom-3 h-px bg-[#c7924b]/40" />
+      <div className="relative grid min-h-[158px] content-between gap-2 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a4638]">{slide.label}</p>
+            <h2 className="mt-1 text-[1.35rem] font-semibold leading-none text-[#3e201b]">{slide.title}</h2>
+          </div>
+          {dateLabel ? <p className="shrink-0 pt-1 text-xs font-semibold text-[#8a4638]">{dateLabel}</p> : null}
+        </div>
+
+        <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-0 overflow-hidden rounded-[8px] border border-[#8a4638]/55 bg-[#3e201b]">
+          <div className="min-w-0 border-r border-[#c7924b]/55 bg-[#8a4638] p-3">
+            <div className="mb-2 inline-flex rounded-[4px] bg-[#c7924b] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#3e201b]">
+              Record holder
+            </div>
+            <p className={`truncate font-semibold leading-none text-[#f5e8d7] ${blowoutNameClass(holder)}`}>{holder}</p>
+            <p className="mt-2 text-[2.2rem] font-semibold leading-none text-[#f5e8d7]">{holderScore || "N/A"}</p>
+          </div>
+
+          <div className="flex w-9 items-center justify-center bg-[#4a251f] text-xs font-semibold text-[#c7924b]">VS</div>
+
+          <div className="min-w-0 bg-[#3e201b] p-3 text-right">
+            <div className="mb-2 h-[26px]" />
+            <p className={`truncate font-semibold leading-none text-[#d8b9a7] ${blowoutNameClass(opponent)}`}>
+              {opponent}
+            </p>
+            <p className="mt-2 text-[2.2rem] font-semibold leading-none text-[#d8b9a7]">{opponentScore || "N/A"}</p>
+          </div>
+        </div>
+
+        {slide.rankLabel ? (
+          <div className="mx-auto -mt-1 inline-flex rounded-full border border-[#9b6c35] bg-[#c7924b] px-4 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-[#3e201b] shadow-sm">
+            {slide.rankLabel.replace(" pt margin", " margin")}
+          </div>
+        ) : null}
+      </div>
+    </Link>
+  );
+}
+
+function blowoutNameClass(value: string) {
+  if (value.length > 18) {
+    return "text-[0.85rem]";
+  }
+
+  if (value.length > 14) {
+    return "text-sm";
+  }
+
+  return "text-base";
 }
 
 function StatTile({
