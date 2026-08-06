@@ -591,7 +591,7 @@ function mostPointsGameRecord(matchups, teamLookup, activeMemberIds) {
       if (best && score <= best.value) continue;
 
       best = {
-        accent: "gold",
+        accent: "blue",
         espnMemberId: team.espnMemberId,
         holderLabel: team.ownerDisplayName ?? team.teamName,
         id: "most-points-game",

@@ -2,6 +2,7 @@ import { LoginWall } from "@/components/auth/login-wall";
 import type { AccoladeRecord } from "@/components/analytics/accolades-card";
 import { AppHeader } from "@/components/layout/app-header";
 import { SeasonFinishes } from "@/components/teams/season-finishes";
+import { TeamAccolades } from "@/components/teams/team-accolades";
 import { TeamEraCard } from "@/components/teams/team-era-card";
 import { TeamLogo } from "@/components/teams/team-logo";
 import {
@@ -12,7 +13,7 @@ import {
   type NormalizedEspnTeam,
 } from "@/lib/espn/analytics";
 import { createClient } from "@/lib/supabase/server";
-import { ArrowLeft, Flame, Link2, Medal, Shield, Sparkles, Swords } from "lucide-react";
+import { ArrowLeft, Link2, Swords } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -162,6 +163,7 @@ export default async function TeamProfilePage({
   });
   const teamAccolades =
     accoladeResult?.payload?.records?.filter((record) => record.espnMemberId === decodedEspnMemberId) ?? [];
+  const championships = normalizedTargetTeams.filter((team) => team.finalRank === 1).length;
 
   return (
     <main className="min-h-dvh bg-[#f7f8f4] text-[#111411]">
@@ -230,7 +232,7 @@ export default async function TeamProfilePage({
           </section>
         ) : null}
 
-        <TeamAccolades records={teamAccolades} />
+        <TeamAccolades championships={championships} records={teamAccolades} />
 
         <TeamEraCard summary={eraSummary} />
 
@@ -238,67 +240,6 @@ export default async function TeamProfilePage({
       </section>
     </main>
   );
-}
-
-function TeamAccolades({ records }: { records: AccoladeRecord[] }) {
-  return (
-    <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm" id="accolades">
-      <div className="flex items-center gap-2">
-        <Sparkles className="text-[#b8872f]" size={18} aria-hidden="true" />
-        <h2 className="text-xl font-semibold">Accolades</h2>
-      </div>
-
-      {records.length ? (
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          {records.map((record) => (
-            <article className={`rounded-[9px] border p-3 ${teamAccoladeClass(record.accent)}`} key={record.id}>
-              <div className="flex items-center gap-2 text-sm font-semibold text-[#293421]">
-                {teamAccoladeIcon(record.id)}
-                {record.title}
-              </div>
-              <p className="mt-2 text-2xl font-semibold text-[#293421]">{record.valueLabel}</p>
-              <p className="mt-1 text-sm leading-6 text-[#626b59]">
-                {record.scoreLine ? `${record.scoreLine} - ` : ""}
-                {record.matchupLabel}
-              </p>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <p className="mt-4 rounded-[10px] border border-dashed border-[#d9decf] bg-[#fbfcf8] p-4 text-sm leading-6 text-[#626b59]">
-          No active record accolades yet.
-        </p>
-      )}
-    </section>
-  );
-}
-
-function teamAccoladeIcon(id: AccoladeRecord["id"]) {
-  if (id === "biggest-blowout") {
-    return <Flame className="text-[#a94124]" size={15} aria-hidden="true" />;
-  }
-
-  if (id === "playoff-run") {
-    return <Shield className="text-[#426b39]" size={15} aria-hidden="true" />;
-  }
-
-  return <Medal className="text-[#b8872f]" size={15} aria-hidden="true" />;
-}
-
-function teamAccoladeClass(accent: AccoladeRecord["accent"]) {
-  if (accent === "red") {
-    return "border-[#efc3b4] bg-[#fff2ec]";
-  }
-
-  if (accent === "gold") {
-    return "border-[#e2c16d] bg-[#fff8df]";
-  }
-
-  if (accent === "green") {
-    return "border-[#c9dabc] bg-[#f1f7ec]";
-  }
-
-  return "border-[#d9c0a2] bg-[#fff5eb]";
 }
 
 function normalizeTeamRow(row: EspnTeamRow): NormalizedEspnTeam {

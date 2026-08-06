@@ -158,7 +158,7 @@ function RankingRow({
     <article
       className={`grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[8px] border p-3 transition ${
         isCurrentTeam
-          ? "border-[#b8872f] bg-[#fff9ea] shadow-[0_0_0_1px_rgba(184,135,47,0.18)]"
+          ? "border-[#4f9a94] bg-[#eef8f6] shadow-[0_0_0_1px_rgba(79,154,148,0.18)]"
           : "border-[#e1e5d9] bg-[#fbfcf8] hover:border-[#c8d1be]"
       }`}
     >

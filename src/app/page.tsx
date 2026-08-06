@@ -54,6 +54,7 @@ type HomeActionsSetting = {
 
 type EspnTeamRow = {
   espn_member_id: string | null;
+  final_rank: number | null;
   logo_url: string | null;
   owner_display_name: string | null;
   season: number;
@@ -151,7 +152,7 @@ export default async function Home() {
     member
       ? supabase
           .from("espn_teams")
-          .select("season, espn_member_id, owner_display_name, team_name, logo_url")
+          .select("season, espn_member_id, owner_display_name, team_name, logo_url, final_rank")
           .not("espn_member_id", "is", null)
           .order("season", { ascending: false })
           .returns<EspnTeamRow[]>()
@@ -177,6 +178,9 @@ export default async function Home() {
     latestLinkedTeam && currentTeamLink
       ? buildHomeAnalyticsSlides({
           analyticsRows: analyticsResult.data ?? [],
+          championships: (espnTeamsResult.data ?? []).filter(
+            (team) => team.espn_member_id === currentTeamLink.espn_member_id && team.final_rank === 1,
+          ).length,
           espnMemberId: currentTeamLink.espn_member_id,
           teamName: latestLinkedTeam.team_name,
         })
@@ -290,10 +294,12 @@ export default async function Home() {
 
 function buildHomeAnalyticsSlides({
   analyticsRows,
+  championships,
   espnMemberId,
   teamName,
 }: {
   analyticsRows: AnalyticsResultRow[];
+  championships: number;
   espnMemberId: string;
   teamName: string;
 }): HomeAnalyticsSlide[] {
@@ -301,22 +307,34 @@ function buildHomeAnalyticsSlides({
   const allTimeRank = findRank(byKey.get("all-time-rankings")?.payload.rankings, espnMemberId);
   const averagePointsRank = findRank(byKey.get("average-points")?.payload.rankings, espnMemberId);
   const records = byKey.get("accolades")?.payload.records?.filter((record) => record.espnMemberId === espnMemberId) ?? [];
+  const leagueRecords = byKey.get("accolades")?.payload.records ?? [];
   const slides: HomeAnalyticsSlide[] = [
     {
       href: `/teams/${encodeURIComponent(espnMemberId)}`,
-      label: "Your team",
-      title: teamName,
-      value: records.length ? `${records.length}` : "Live",
-      rankLabel: records.length ? "accolade" + (records.length === 1 ? "" : "s") : "linked",
+      cta: "View team",
+      label: "Your snapshot",
+      meta: teamName,
+      rankLabel: "team card",
+      stats: [
+        { label: "Power", value: allTimeRank ? `#${allTimeRank.index + 1}` : "N/A" },
+        { label: "Avg points", value: averagePointsRank ? `#${averagePointsRank.index + 1}` : "N/A" },
+        { label: "Championships", value: String(championships) },
+        { label: "Records", value: String(records.length) },
+      ],
+      title: "League history",
+      tone: "green",
+      value: allTimeRank ? `#${allTimeRank.index + 1}` : "Live",
     },
   ];
 
   if (allTimeRank) {
     slides.push({
       href: "/analytics#historical-rankings",
+      cta: "Open rankings",
       label: "All-time power",
       rankLabel: "PWR",
       title: "Historical ranking",
+      tone: "slate",
       value: `#${allTimeRank.index + 1}`,
     });
   }
@@ -325,19 +343,28 @@ function buildHomeAnalyticsSlides({
     const row = averagePointsRank.row as AveragePointsRow;
     slides.push({
       href: "/analytics#average-points",
+      cta: "Open scoring",
       label: "Scoring pace",
       rankLabel: `${row.averagePoints.toLocaleString()} AVG`,
       title: "Average points scored",
+      tone: "blue",
       value: `#${averagePointsRank.index + 1}`,
     });
   }
 
-  for (const record of records) {
+  for (const record of leagueRecords) {
     slides.push({
       href: "/analytics#accolades",
+      cta: "View accolade",
       label: "Accolade",
       rankLabel: record.valueLabel,
       title: record.title,
+      meta: `${record.holderLabel} - ${record.matchupLabel}`,
+      stats: [
+        { label: "Holder", value: record.holderLabel.split(" ")[0] ?? record.holderLabel },
+        { label: "Score", value: record.scoreLine ?? record.valueLabel },
+      ],
+      tone: record.id === "biggest-blowout" ? "red" : record.id === "most-points-game" ? "blue" : "green",
       value: "Record",
     });
   }

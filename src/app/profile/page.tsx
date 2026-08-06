@@ -1,9 +1,11 @@
 import { BadgePill } from "@/components/members/badge-pill";
+import type { AccoladeRecord } from "@/components/analytics/accolades-card";
 import { MemberAvatar } from "@/components/members/member-avatar";
 import { ProfileForm } from "@/components/members/profile-form";
 import { LoginWall } from "@/components/auth/login-wall";
 import { AppHeader } from "@/components/layout/app-header";
 import { SeasonFinishes } from "@/components/teams/season-finishes";
+import { TeamAccolades } from "@/components/teams/team-accolades";
 import { TeamEraCard } from "@/components/teams/team-era-card";
 import { TeamLogo } from "@/components/teams/team-logo";
 import {
@@ -52,6 +54,12 @@ type MatchupRow = {
   winner: string | null;
 };
 
+type AnalyticsResultRow = {
+  payload: {
+    records?: AccoladeRecord[];
+  };
+};
+
 export default async function ProfilePage() {
   const supabase = await createClient();
   const {
@@ -91,7 +99,7 @@ export default async function ProfilePage() {
         .order("season", { ascending: false })
         .returns<EspnTeamRow[]>()
     : { data: [] as EspnTeamRow[] };
-  const [{ data: allTeams }, { data: matchups }] = teamLink?.espn_member_id
+  const [{ data: allTeams }, { data: matchups }, { data: accoladeResult }] = teamLink?.espn_member_id
     ? await Promise.all([
         supabase
           .from("espn_teams")
@@ -103,8 +111,13 @@ export default async function ProfilePage() {
             "season, espn_matchup_id, matchup_period_id, home_team_id, away_team_id, home_score, away_score, winner, playoff_tier_type",
           )
           .returns<MatchupRow[]>(),
+        supabase
+          .from("analytics_results")
+          .select("payload")
+          .eq("metric_key", "accolades")
+          .maybeSingle<AnalyticsResultRow>(),
       ])
-    : [{ data: [] as EspnTeamRow[] }, { data: [] as MatchupRow[] }];
+    : [{ data: [] as EspnTeamRow[] }, { data: [] as MatchupRow[] }, { data: null }];
   const member = baseMember
     ? attachBadgesToMember({ ...baseMember, badges: [] as MemberBadge[] }, badgeAwards)
     : null;
@@ -116,6 +129,11 @@ export default async function ProfilePage() {
         targetTeams: linkedTeams.map(normalizeTeamRow),
       })
     : null;
+  const championships = linkedTeams?.filter((team) => team.final_rank === 1).length ?? 0;
+  const teamAccolades =
+    teamLink?.espn_member_id
+      ? accoladeResult?.payload?.records?.filter((record) => record.espnMemberId === teamLink.espn_member_id) ?? []
+      : [];
 
   const canEdit = Boolean(member?.is_member && !member.revoked_at);
 
@@ -181,6 +199,10 @@ export default async function ProfilePage() {
                   </p>
                 )}
               </section>
+
+              {teamLink?.espn_member_id ? (
+                <TeamAccolades championships={championships} records={teamAccolades} />
+              ) : null}
 
               {eraSummary ? <TeamEraCard summary={eraSummary} /> : null}
 

@@ -65,7 +65,7 @@ export type AveragePointsRow = {
 };
 
 export type AccoladeRecord = {
-  accent: "bronze" | "gold" | "green" | "red";
+  accent: "blue" | "bronze" | "gold" | "green" | "red";
   espnMemberId: string;
   holderLabel: string;
   id: "biggest-blowout" | "most-points-game" | "playoff-run";
@@ -783,7 +783,7 @@ function mostPointsGameRecord(
       }
 
       best = {
-        accent: "gold",
+        accent: "blue",
         espnMemberId: team.espnMemberId,
         holderLabel: team.ownerDisplayName ?? team.teamName,
         id: "most-points-game",

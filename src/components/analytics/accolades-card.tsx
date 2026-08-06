@@ -4,7 +4,7 @@ import { Flame, Medal, Shield, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 export type AccoladeRecord = {
-  accent: "bronze" | "gold" | "green" | "red";
+  accent: "blue" | "bronze" | "gold" | "green" | "red";
   espnMemberId: string;
   holderLabel: string;
   id: "biggest-blowout" | "most-points-game" | "playoff-run";
@@ -84,7 +84,7 @@ function recordIcon(id: AccoladeRecord["id"]) {
     return <Shield className="text-[#426b39]" size={20} aria-hidden="true" />;
   }
 
-  return <Medal className="text-[#b8872f]" size={20} aria-hidden="true" />;
+  return <Medal className="text-[#2f6f8f]" size={20} aria-hidden="true" />;
 }
 
 function accentClass(accent: AccoladeRecord["accent"]) {
@@ -92,8 +92,8 @@ function accentClass(accent: AccoladeRecord["accent"]) {
     return "border-[#efc3b4] bg-[#fff2ec] shadow-sm hover:border-[#e3a18b]";
   }
 
-  if (accent === "gold") {
-    return "border-[#e2c16d] bg-[#fff8df] shadow-sm hover:border-[#cfa744]";
+  if (accent === "blue") {
+    return "border-[#b9d6e6] bg-[#eef8fc] shadow-sm hover:border-[#8ebcd2]";
   }
 
   if (accent === "green") {
