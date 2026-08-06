@@ -273,8 +273,6 @@ function HistoricalRankingSlide({ slide }: { slide: HomeAnalyticsSlide }) {
               stroke="#766F5B"
               strokeWidth="1"
             />
-            <path d="M34 29H88" stroke="#6A6251" strokeLinecap="round" strokeWidth="1" />
-            <path d="M34 75H88" stroke="#6A6251" strokeLinecap="round" strokeWidth="1" />
           </svg>
           <span className="relative text-5xl font-semibold leading-none text-white drop-shadow-sm">
             {slide.value}

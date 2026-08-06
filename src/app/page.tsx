@@ -385,10 +385,11 @@ function buildHomeAnalyticsSlides({
     const row = averagePointsRank.row as AveragePointsRow;
     slides.push({
       href: "/analytics?metric=average-points#average-points-current-team",
-      label: "Scoring pace",
+      kind: "historicalRanking",
+      label: "Historical ranking",
       rankLabel: `${row.averagePoints.toLocaleString()} AVG`,
-      title: "Average points scored",
-      tone: "blue",
+      title: "Average Points Scored",
+      tone: "slate",
       value: `#${averagePointsRank.index + 1}`,
     });
   }
