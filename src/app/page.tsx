@@ -7,6 +7,11 @@ import { ProposalFeedCard, type FeedProposal } from "@/components/proposals/prop
 import type { AccoladeRecord } from "@/components/analytics/accolades-card";
 import type { AllTimeRankingRow } from "@/components/analytics/all-time-rankings-card";
 import type { AveragePointsRow } from "@/components/analytics/average-points-card";
+import {
+  buildTeamEraSummary,
+  type NormalizedEspnMatchup,
+  type NormalizedEspnTeam,
+} from "@/lib/espn/analytics";
 import { badgesForMember, type MemberBadge, type MemberBadgeAward } from "@/lib/members/badges";
 import { createClient } from "@/lib/supabase/server";
 import { Megaphone, Plus } from "lucide-react";
@@ -54,11 +59,25 @@ type HomeActionsSetting = {
 
 type EspnTeamRow = {
   espn_member_id: string | null;
+  espn_team_id: number;
   final_rank: number | null;
   logo_url: string | null;
   owner_display_name: string | null;
+  points: number | null;
   season: number;
   team_name: string;
+};
+
+type MatchupRow = {
+  away_score: number | null;
+  away_team_id: number | null;
+  espn_matchup_id: number;
+  home_score: number | null;
+  home_team_id: number | null;
+  matchup_period_id: number;
+  playoff_tier_type: string | null;
+  season: number;
+  winner: string | null;
 };
 
 type TeamLinkRow = {
@@ -108,6 +127,7 @@ export default async function Home() {
     homeActionsResult,
     analyticsResult,
     espnTeamsResult,
+    matchupsResult,
     teamLinksResult,
   ] = await Promise.all([
     supabase
@@ -152,11 +172,19 @@ export default async function Home() {
     member
       ? supabase
           .from("espn_teams")
-          .select("season, espn_member_id, owner_display_name, team_name, logo_url, final_rank")
+          .select("season, espn_member_id, espn_team_id, owner_display_name, team_name, logo_url, final_rank, points")
           .not("espn_member_id", "is", null)
           .order("season", { ascending: false })
           .returns<EspnTeamRow[]>()
       : Promise.resolve({ data: [] as EspnTeamRow[] }),
+    member
+      ? supabase
+          .from("espn_matchups")
+          .select(
+            "season, espn_matchup_id, matchup_period_id, home_team_id, away_team_id, home_score, away_score, winner, playoff_tier_type",
+          )
+          .returns<MatchupRow[]>()
+      : Promise.resolve({ data: [] as MatchupRow[] }),
     member
       ? supabase
           .from("member_team_links")
@@ -182,6 +210,9 @@ export default async function Home() {
             (team) => team.espn_member_id === currentTeamLink.espn_member_id && team.final_rank === 1,
           ).length,
           espnMemberId: currentTeamLink.espn_member_id,
+          logoUrl: latestLinkedTeam.logo_url,
+          matchups: matchupsResult.data ?? [],
+          teams: espnTeamsResult.data ?? [],
           teamName: latestLinkedTeam.team_name,
         })
       : [];
@@ -296,41 +327,51 @@ function buildHomeAnalyticsSlides({
   analyticsRows,
   championships,
   espnMemberId,
+  logoUrl,
+  matchups,
+  teams,
   teamName,
 }: {
   analyticsRows: AnalyticsResultRow[];
   championships: number;
   espnMemberId: string;
+  logoUrl: string | null;
+  matchups: MatchupRow[];
+  teams: EspnTeamRow[];
   teamName: string;
 }): HomeAnalyticsSlide[] {
   const byKey = new Map(analyticsRows.map((row) => [row.metric_key, row]));
   const allTimeRank = findRank(byKey.get("all-time-rankings")?.payload.rankings, espnMemberId);
   const averagePointsRank = findRank(byKey.get("average-points")?.payload.rankings, espnMemberId);
-  const records = byKey.get("accolades")?.payload.records?.filter((record) => record.espnMemberId === espnMemberId) ?? [];
   const leagueRecords = byKey.get("accolades")?.payload.records ?? [];
+  const linkedTeams = teams.filter((team) => team.espn_member_id === espnMemberId);
+  const eraSummary = linkedTeams.length
+    ? buildTeamEraSummary({
+        allTeams: teams.map(normalizeTeamRow),
+        matchups: matchups.map(normalizeMatchupRow),
+        targetTeams: linkedTeams.map(normalizeTeamRow),
+      })
+    : null;
   const slides: HomeAnalyticsSlide[] = [
     {
       href: `/teams/${encodeURIComponent(espnMemberId)}`,
-      cta: "View team",
-      label: "Your snapshot",
+      label: "Your team",
+      logoUrl,
       meta: teamName,
-      rankLabel: "team card",
       stats: [
-        { label: "Power", value: allTimeRank ? `#${allTimeRank.index + 1}` : "N/A" },
-        { label: "Avg points", value: averagePointsRank ? `#${averagePointsRank.index + 1}` : "N/A" },
-        { label: "Championships", value: String(championships) },
-        { label: "Records", value: String(records.length) },
+        { label: "Avg finish", value: eraSummary?.averageFinish ? `#${eraSummary.averageFinish}` : "N/A" },
+        { label: "Favorite opponent", value: eraSummary?.favoriteOpponent?.managerLabel ?? "N/A" },
       ],
-      title: "League history",
-      tone: "green",
-      value: allTimeRank ? `#${allTimeRank.index + 1}` : "Live",
+      title: teamName,
+      tone: "teal",
+      value: championships ? `${championships}x` : "Team",
+      rankLabel: championships ? "champion" : "linked",
     },
   ];
 
   if (allTimeRank) {
     slides.push({
-      href: "/analytics#historical-rankings",
-      cta: "Open rankings",
+      href: "/analytics?metric=all-time-rankings#all-time-rankings-current-team",
       label: "All-time power",
       rankLabel: "PWR",
       title: "Historical ranking",
@@ -342,8 +383,7 @@ function buildHomeAnalyticsSlides({
   if (averagePointsRank) {
     const row = averagePointsRank.row as AveragePointsRow;
     slides.push({
-      href: "/analytics#average-points",
-      cta: "Open scoring",
+      href: "/analytics?metric=average-points#average-points-current-team",
       label: "Scoring pace",
       rankLabel: `${row.averagePoints.toLocaleString()} AVG`,
       title: "Average points scored",
@@ -354,8 +394,7 @@ function buildHomeAnalyticsSlides({
 
   for (const record of leagueRecords) {
     slides.push({
-      href: "/analytics#accolades",
-      cta: "View accolade",
+      href: "/analytics?metric=accolades#accolades",
       label: "Accolade",
       rankLabel: record.valueLabel,
       title: record.title,
@@ -364,12 +403,41 @@ function buildHomeAnalyticsSlides({
         { label: "Holder", value: record.holderLabel.split(" ")[0] ?? record.holderLabel },
         { label: "Score", value: record.scoreLine ?? record.valueLabel },
       ],
-      tone: record.id === "biggest-blowout" ? "red" : record.id === "most-points-game" ? "blue" : "green",
+      tone: record.id === "biggest-blowout" ? "red" : record.id === "most-points-game" ? "blue" : "slate",
       value: "Record",
     });
   }
 
   return slides;
+}
+
+function normalizeTeamRow(row: EspnTeamRow): NormalizedEspnTeam {
+  return {
+    abbreviation: null,
+    espnMemberId: row.espn_member_id,
+    espnTeamId: row.espn_team_id,
+    finalRank: row.final_rank,
+    logoUrl: row.logo_url,
+    ownerDisplayName: row.owner_display_name,
+    playoffSeed: null,
+    points: row.points,
+    season: row.season,
+    teamName: row.team_name,
+  };
+}
+
+function normalizeMatchupRow(row: MatchupRow): NormalizedEspnMatchup {
+  return {
+    awayScore: row.away_score,
+    awayTeamId: row.away_team_id,
+    espnMatchupId: row.espn_matchup_id,
+    homeScore: row.home_score,
+    homeTeamId: row.home_team_id,
+    matchupPeriodId: row.matchup_period_id,
+    playoffTierType: row.playoff_tier_type,
+    season: row.season,
+    winner: row.winner,
+  };
 }
 
 function findRank(rows: AnalyticsResultRow["payload"]["rankings"], espnMemberId: string) {

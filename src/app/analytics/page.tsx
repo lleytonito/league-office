@@ -34,7 +34,12 @@ type TeamLinkRow = {
   espn_member_id: string;
 };
 
-export default async function AnalyticsPage() {
+export default async function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ metric?: string }>;
+}) {
+  const { metric } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -108,21 +113,24 @@ export default async function AnalyticsPage() {
               <AllTimeRankingsCard
                 completedSeasons={completedSeasons}
                 currentEspnMemberId={currentEspnMemberId}
+                defaultExpanded={metric === "all-time-rankings"}
                 hasWarnings={rankingHasWarnings}
                 lastRefreshedAt={rankingResult?.last_refreshed_at ?? null}
                 rankings={rankings}
               />
-              <LuckIndexCard
-                currentEspnMemberId={currentEspnMemberId}
-                hasWarnings={luckHasWarnings}
-                lastRefreshedAt={luckResult?.last_refreshed_at ?? null}
-                rows={luckIndex}
-              />
               <AveragePointsCard
                 currentEspnMemberId={currentEspnMemberId}
+                defaultExpanded={metric === "average-points"}
                 hasWarnings={averagePointsHasWarnings}
                 lastRefreshedAt={averagePointsResult?.last_refreshed_at ?? null}
                 rows={averagePoints}
+              />
+              <LuckIndexCard
+                currentEspnMemberId={currentEspnMemberId}
+                defaultExpanded={metric === "luck-index"}
+                hasWarnings={luckHasWarnings}
+                lastRefreshedAt={luckResult?.last_refreshed_at ?? null}
+                rows={luckIndex}
               />
             </section>
             <section className="grid gap-3" id="accolades">

@@ -17,19 +17,21 @@ export type LuckIndexRow = {
 
 export function LuckIndexCard({
   currentEspnMemberId,
+  defaultExpanded = false,
   hasWarnings,
   lastRefreshedAt,
   rows,
 }: {
   currentEspnMemberId?: string | null;
+  defaultExpanded?: boolean;
   hasWarnings: boolean;
   lastRefreshedAt: string | null;
   rows: LuckIndexRow[];
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
 
   return (
-    <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm">
+    <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm" id="luck-index">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -150,6 +152,7 @@ function LuckRow({
             ? "border-[#4f9a94] bg-[#eef8f6] shadow-[0_0_0_1px_rgba(79,154,148,0.18)]"
             : "border-[#e1e5d9] bg-[#fbfcf8] hover:border-[#c8d1be]"
         }`}
+        id={isCurrentTeam ? "luck-index-current-team" : undefined}
       >
       <span className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${tone.badge}`}>
         {index + 1}

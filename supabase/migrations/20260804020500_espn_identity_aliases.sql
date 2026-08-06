@@ -62,6 +62,18 @@ insert into public.espn_identity_aliases (
     '{8AD4B9A3-43CC-4BD2-80AE-1ED203C5862E}',
     'Benton Worthen',
     'Canonical ESPN identity for Benton.'
+  ),
+  (
+    '{2154EA28-82E4-4ED1-BA34-A74C7332BE99}',
+    '{7B3A367D-C0E4-479B-8F05-DF44A8B7A481}',
+    'Lleyton Ito',
+    'Manual historical ESPN identity merge for Lleyton/Kristin Ito.'
+  ),
+  (
+    '{7B3A367D-C0E4-479B-8F05-DF44A8B7A481}',
+    '{7B3A367D-C0E4-479B-8F05-DF44A8B7A481}',
+    'Lleyton Ito',
+    'Canonical active ESPN identity for Lleyton.'
   )
 on conflict (espn_member_id) do update
 set

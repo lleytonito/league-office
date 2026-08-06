@@ -1,5 +1,8 @@
 import { LoginWall } from "@/components/auth/login-wall";
 import type { AccoladeRecord } from "@/components/analytics/accolades-card";
+import type { AllTimeRankingRow } from "@/components/analytics/all-time-rankings-card";
+import type { AveragePointsRow } from "@/components/analytics/average-points-card";
+import type { LuckIndexRow } from "@/components/analytics/luck-index-card";
 import { AppHeader } from "@/components/layout/app-header";
 import { SeasonFinishes } from "@/components/teams/season-finishes";
 import { TeamAccolades } from "@/components/teams/team-accolades";
@@ -63,8 +66,11 @@ type MatchupRow = {
 };
 
 type AnalyticsResultRow = {
+  metric_key: string;
   payload: {
     records?: AccoladeRecord[];
+    rankings?: Array<AllTimeRankingRow | AveragePointsRow>;
+    luckIndex?: LuckIndexRow[];
   };
 };
 
@@ -99,7 +105,7 @@ export default async function TeamProfilePage({
     { data: currentLink },
     { data: allLinkedTeams },
     { data: matchups },
-    { data: accoladeResult },
+    { data: analyticsResults },
   ] = await Promise.all([
     supabase
       .from("espn_teams")
@@ -131,9 +137,9 @@ export default async function TeamProfilePage({
       .returns<MatchupRow[]>(),
     supabase
       .from("analytics_results")
-      .select("payload")
-      .eq("metric_key", "accolades")
-      .maybeSingle<AnalyticsResultRow>(),
+      .select("metric_key, payload")
+      .in("metric_key", ["all-time-rankings", "average-points", "luck-index", "accolades"])
+      .returns<AnalyticsResultRow[]>(),
   ]);
 
   if (!targetTeams?.length) {
@@ -161,9 +167,16 @@ export default async function TeamProfilePage({
     matchups: normalizedMatchups,
     targetTeams: normalizedTargetTeams,
   });
+  const analyticsByKey = new Map((analyticsResults ?? []).map((result) => [result.metric_key, result]));
   const teamAccolades =
-    accoladeResult?.payload?.records?.filter((record) => record.espnMemberId === decodedEspnMemberId) ?? [];
+    analyticsByKey.get("accolades")?.payload?.records?.filter((record) => record.espnMemberId === decodedEspnMemberId) ?? [];
   const championships = normalizedTargetTeams.filter((team) => team.finalRank === 1).length;
+  const championshipSeasons = normalizedTargetTeams
+    .filter((team) => team.finalRank === 1)
+    .map((team) => ({ season: team.season, teamName: team.teamName }))
+    .sort((a, b) => a.season - b.season);
+  const rankingAccolades = rankingAccoladesForTeam(analyticsByKey, decodedEspnMemberId);
+  const veteranSeasons = normalizedTargetTeams.filter((team) => team.finalRank && team.finalRank > 0).length;
 
   return (
     <main className="min-h-dvh bg-[#f7f8f4] text-[#111411]">
@@ -232,7 +245,13 @@ export default async function TeamProfilePage({
           </section>
         ) : null}
 
-        <TeamAccolades championships={championships} records={teamAccolades} />
+        <TeamAccolades
+          championships={championships}
+          championshipSeasons={championshipSeasons}
+          rankingAccolades={rankingAccolades}
+          records={teamAccolades}
+          veteranSeasons={veteranSeasons}
+        />
 
         <TeamEraCard summary={eraSummary} />
 
@@ -305,4 +324,21 @@ function HeadToHeadStats({
       <Stat label="Seasons" value={seasons} />
     </div>
   );
+}
+
+function rankingAccoladesForTeam(results: Map<string, AnalyticsResultRow>, espnMemberId: string) {
+  return [
+    rankingAccolade(results.get("all-time-rankings")?.payload.rankings, espnMemberId, "Historical Power"),
+    rankingAccolade(results.get("average-points")?.payload.rankings, espnMemberId, "Average Points Scored"),
+    rankingAccolade(results.get("luck-index")?.payload.luckIndex, espnMemberId, "Luck Index"),
+  ].filter((accolade): accolade is { label: string; rank: number } => Boolean(accolade));
+}
+
+function rankingAccolade(
+  rows: Array<{ espnMemberId: string | null }> | undefined,
+  espnMemberId: string,
+  label: string,
+) {
+  const index = (rows ?? []).findIndex((row) => row.espnMemberId === espnMemberId);
+  return index >= 0 && index < 3 ? { label, rank: index + 1 } : null;
 }

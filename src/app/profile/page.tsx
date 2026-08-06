@@ -1,5 +1,8 @@
 import { BadgePill } from "@/components/members/badge-pill";
 import type { AccoladeRecord } from "@/components/analytics/accolades-card";
+import type { AllTimeRankingRow } from "@/components/analytics/all-time-rankings-card";
+import type { AveragePointsRow } from "@/components/analytics/average-points-card";
+import type { LuckIndexRow } from "@/components/analytics/luck-index-card";
 import { MemberAvatar } from "@/components/members/member-avatar";
 import { ProfileForm } from "@/components/members/profile-form";
 import { LoginWall } from "@/components/auth/login-wall";
@@ -55,8 +58,11 @@ type MatchupRow = {
 };
 
 type AnalyticsResultRow = {
+  metric_key: string;
   payload: {
     records?: AccoladeRecord[];
+    rankings?: Array<AllTimeRankingRow | AveragePointsRow>;
+    luckIndex?: LuckIndexRow[];
   };
 };
 
@@ -99,7 +105,7 @@ export default async function ProfilePage() {
         .order("season", { ascending: false })
         .returns<EspnTeamRow[]>()
     : { data: [] as EspnTeamRow[] };
-  const [{ data: allTeams }, { data: matchups }, { data: accoladeResult }] = teamLink?.espn_member_id
+  const [{ data: allTeams }, { data: matchups }, { data: analyticsResults }] = teamLink?.espn_member_id
     ? await Promise.all([
         supabase
           .from("espn_teams")
@@ -113,11 +119,11 @@ export default async function ProfilePage() {
           .returns<MatchupRow[]>(),
         supabase
           .from("analytics_results")
-          .select("payload")
-          .eq("metric_key", "accolades")
-          .maybeSingle<AnalyticsResultRow>(),
+          .select("metric_key, payload")
+          .in("metric_key", ["all-time-rankings", "average-points", "luck-index", "accolades"])
+          .returns<AnalyticsResultRow[]>(),
       ])
-    : [{ data: [] as EspnTeamRow[] }, { data: [] as MatchupRow[] }, { data: null }];
+    : [{ data: [] as EspnTeamRow[] }, { data: [] as MatchupRow[] }, { data: [] as AnalyticsResultRow[] }];
   const member = baseMember
     ? attachBadgesToMember({ ...baseMember, badges: [] as MemberBadge[] }, badgeAwards)
     : null;
@@ -130,9 +136,18 @@ export default async function ProfilePage() {
       })
     : null;
   const championships = linkedTeams?.filter((team) => team.final_rank === 1).length ?? 0;
+  const championshipSeasons = (linkedTeams ?? [])
+    .filter((team) => team.final_rank === 1)
+    .map((team) => ({ season: team.season, teamName: team.team_name }))
+    .sort((a, b) => a.season - b.season);
+  const analyticsByKey = new Map((analyticsResults ?? []).map((result) => [result.metric_key, result]));
+  const rankingAccolades = teamLink?.espn_member_id
+    ? rankingAccoladesForTeam(analyticsByKey, teamLink.espn_member_id)
+    : [];
+  const veteranSeasons = (linkedTeams ?? []).filter((team) => team.final_rank && team.final_rank > 0).length;
   const teamAccolades =
     teamLink?.espn_member_id
-      ? accoladeResult?.payload?.records?.filter((record) => record.espnMemberId === teamLink.espn_member_id) ?? []
+      ? analyticsByKey.get("accolades")?.payload?.records?.filter((record) => record.espnMemberId === teamLink.espn_member_id) ?? []
       : [];
 
   const canEdit = Boolean(member?.is_member && !member.revoked_at);
@@ -201,7 +216,13 @@ export default async function ProfilePage() {
               </section>
 
               {teamLink?.espn_member_id ? (
-                <TeamAccolades championships={championships} records={teamAccolades} />
+                <TeamAccolades
+                  championships={championships}
+                  championshipSeasons={championshipSeasons}
+                  rankingAccolades={rankingAccolades}
+                  records={teamAccolades}
+                  veteranSeasons={veteranSeasons}
+                />
               ) : null}
 
               {eraSummary ? <TeamEraCard summary={eraSummary} /> : null}
@@ -274,4 +295,21 @@ function normalizeMatchupRow(row: MatchupRow): NormalizedEspnMatchup {
     season: row.season,
     winner: row.winner,
   };
+}
+
+function rankingAccoladesForTeam(results: Map<string, AnalyticsResultRow>, espnMemberId: string) {
+  return [
+    rankingAccolade(results.get("all-time-rankings")?.payload.rankings, espnMemberId, "Historical Power"),
+    rankingAccolade(results.get("average-points")?.payload.rankings, espnMemberId, "Average Points Scored"),
+    rankingAccolade(results.get("luck-index")?.payload.luckIndex, espnMemberId, "Luck Index"),
+  ].filter((accolade): accolade is { label: string; rank: number } => Boolean(accolade));
+}
+
+function rankingAccolade(
+  rows: Array<{ espnMemberId: string | null }> | undefined,
+  espnMemberId: string,
+  label: string,
+) {
+  const index = (rows ?? []).findIndex((row) => row.espnMemberId === espnMemberId);
+  return index >= 0 && index < 3 ? { label, rank: index + 1 } : null;
 }

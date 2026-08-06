@@ -24,20 +24,22 @@ const powerFormula = {
 export function AllTimeRankingsCard({
   completedSeasons,
   currentEspnMemberId,
+  defaultExpanded = false,
   hasWarnings,
   lastRefreshedAt,
   rankings,
 }: {
   completedSeasons: number[];
   currentEspnMemberId?: string | null;
+  defaultExpanded?: boolean;
   hasWarnings: boolean;
   lastRefreshedAt: string | null;
   rankings: AllTimeRankingRow[];
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
 
   return (
-    <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm">
+    <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm" id="all-time-rankings">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">All-Time Rankings</h2>
@@ -161,6 +163,7 @@ function RankingRow({
           ? "border-[#4f9a94] bg-[#eef8f6] shadow-[0_0_0_1px_rgba(79,154,148,0.18)]"
           : "border-[#e1e5d9] bg-[#fbfcf8] hover:border-[#c8d1be]"
       }`}
+      id={isCurrentTeam ? "all-time-rankings-current-team" : undefined}
     >
       <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#183a2b] text-sm font-semibold text-white">
         {index + 1}

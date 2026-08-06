@@ -8,10 +8,11 @@ export type HomeAnalyticsSlide = {
   cta?: string;
   href: string;
   label: string;
+  logoUrl?: string | null;
   meta?: string;
   rankLabel?: string;
   stats?: Array<{ label: string; value: string }>;
-  tone?: "blue" | "green" | "red" | "slate";
+  tone?: "blue" | "green" | "red" | "slate" | "teal";
   title: string;
   value: string;
 };
@@ -24,10 +25,18 @@ export function LeagueHistoryPanel({
   teamName: string;
 }) {
   const [index, setIndex] = useState(0);
+  const [direction, setDirection] = useState(0);
+  const [dragX, setDragX] = useState(0);
   const touchStartX = useRef<number | null>(null);
   const activeSlide = slides[index] ?? null;
-  const goToPrevious = () => setIndex((current) => (current - 1 + slides.length) % slides.length);
-  const goToNext = () => setIndex((current) => (current + 1) % slides.length);
+  const goToPrevious = () => {
+    setDirection(-1);
+    setIndex((current) => (current - 1 + slides.length) % slides.length);
+  };
+  const goToNext = () => {
+    setDirection(1);
+    setIndex((current) => (current + 1) % slides.length);
+  };
 
   function handleTouchEnd(clientX: number) {
     if (touchStartX.current === null || slides.length < 2) {
@@ -37,6 +46,7 @@ export function LeagueHistoryPanel({
 
     const distance = clientX - touchStartX.current;
     touchStartX.current = null;
+    setDragX(0);
 
     if (Math.abs(distance) < 38) {
       return;
@@ -55,21 +65,41 @@ export function LeagueHistoryPanel({
         <div
           className="grid gap-2"
           onTouchEnd={(event) => handleTouchEnd(event.changedTouches[0]?.clientX ?? 0)}
+          onTouchMove={(event) => {
+            if (touchStartX.current === null || slides.length < 2) {
+              return;
+            }
+
+            const currentX = event.touches[0]?.clientX ?? touchStartX.current;
+            setDragX(Math.max(Math.min(currentX - touchStartX.current, 36), -36));
+          }}
           onTouchStart={(event) => {
             touchStartX.current = event.touches[0]?.clientX ?? null;
           }}
         >
           {activeSlide ? (
             <article
-              className={`overflow-hidden rounded-[10px] border p-4 shadow-sm transition ${slideTone(activeSlide.tone)}`}
+              className={`overflow-hidden rounded-[10px] border p-3 shadow-sm transition-all duration-300 ease-out motion-reduce:transition-none ${
+                direction >= 0 ? "animate-[slideInRight_220ms_ease-out]" : "animate-[slideInLeft_220ms_ease-out]"
+              } ${slideTone(activeSlide.tone)}`}
+              key={`${activeSlide.title}-${index}`}
+              style={dragX ? { transform: `translateX(${dragX}px)` } : undefined}
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
+                {activeSlide.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    alt=""
+                    className="h-12 w-12 shrink-0 rounded-full border border-white/30 bg-white/15 object-cover"
+                    src={activeSlide.logoUrl}
+                  />
+                ) : null}
+                <div className="min-w-0 flex-1">
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#ffffffcc]">
                     {activeSlide.label}
                   </p>
                   <Link
-                    className="mt-1 block truncate text-xl font-semibold text-white underline-offset-4 hover:underline"
+                    className="mt-1 inline-flex max-w-full items-center truncate text-lg font-semibold text-white underline decoration-white/70 decoration-2 underline-offset-4 transition hover:decoration-white"
                     href={activeSlide.href}
                   >
                     {activeSlide.title}
@@ -77,7 +107,7 @@ export function LeagueHistoryPanel({
                   <p className="truncate text-sm text-[#ffffffbf]">{activeSlide.meta ?? teamName}</p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="text-3xl font-semibold text-white">{activeSlide.value}</p>
+                  <p className="text-2xl font-semibold text-white">{activeSlide.value}</p>
                   {activeSlide.rankLabel ? (
                     <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#ffffffbf]">
                       {activeSlide.rankLabel}
@@ -87,10 +117,10 @@ export function LeagueHistoryPanel({
               </div>
 
               {activeSlide.stats?.length ? (
-                <div className="mt-4 grid grid-cols-2 gap-2">
+                <div className="mt-3 grid grid-cols-2 gap-2">
                   {activeSlide.stats.map((stat) => (
                     <div className="rounded-[8px] bg-white/14 p-2 text-white backdrop-blur" key={stat.label}>
-                      <p className="text-lg font-semibold leading-none">{stat.value}</p>
+                      <p className="truncate text-base font-semibold leading-none">{stat.value}</p>
                       <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#ffffffb8]">
                         {stat.label}
                       </p>
@@ -98,13 +128,6 @@ export function LeagueHistoryPanel({
                   ))}
                 </div>
               ) : null}
-
-              <Link
-                className="mt-4 inline-flex h-9 items-center justify-center rounded-full bg-white/90 px-3 text-sm font-semibold text-[#183a2b] transition hover:bg-white"
-                href={activeSlide.href}
-              >
-                {activeSlide.cta ?? "Open analytic"}
-              </Link>
             </article>
           ) : (
             <div className="rounded-[9px] border border-[#c8d1be] bg-white p-3">
@@ -182,5 +205,9 @@ function slideTone(tone: HomeAnalyticsSlide["tone"]) {
     return "border-[#6f776b] bg-[#3d4c43]";
   }
 
-  return "border-[#587246] bg-[#183a2b]";
+  if (tone === "teal") {
+    return "border-[#4f9a94] bg-[#245d5a]";
+  }
+
+  return "border-[#658250] bg-[#3f5f36]";
 }

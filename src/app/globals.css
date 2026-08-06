@@ -38,6 +38,30 @@ summary {
   animation: vote-pop 260ms ease-out;
 }
 
+@keyframes slideInRight {
+  0% {
+    opacity: 0.78;
+    transform: translateX(18px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft {
+  0% {
+    opacity: 0.78;
+    transform: translateX(-18px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @keyframes vote-pop {
   0% {
     transform: scale(0.985);
