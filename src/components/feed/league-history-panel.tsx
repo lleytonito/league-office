@@ -8,7 +8,7 @@ import { useRef, useState } from "react";
 export type HomeAnalyticsSlide = {
   cta?: string;
   href: string;
-  kind?: "biggestBlowout" | "historicalRanking" | "metric" | "team";
+  kind?: "biggestBlowout" | "historicalRanking" | "metric" | "mostPointsGame" | "team";
   label: string;
   logoUrl?: string | null;
   meta?: string;
@@ -90,6 +90,8 @@ export function LeagueHistoryPanel({
                     ? "border-[#8a6a4c] bg-[#5a4231] p-[2px]"
                     : activeSlide.kind === "biggestBlowout"
                       ? "border-[#a46a54] bg-[#7f4638] p-[2px]"
+                      : activeSlide.kind === "mostPointsGame"
+                        ? "border-[#456a7f] bg-[#1e313a] p-[2px]"
                   : `${slideTone(activeSlide.tone)} p-3`
               }`}
               key={`${activeSlide.title}-${index}`}
@@ -101,6 +103,8 @@ export function LeagueHistoryPanel({
                 <TeamSummarySlide slide={activeSlide} />
               ) : activeSlide.kind === "biggestBlowout" ? (
                 <BiggestBlowoutSlide slide={activeSlide} />
+              ) : activeSlide.kind === "mostPointsGame" ? (
+                <MostPointsGameSlide slide={activeSlide} />
               ) : (
                 <>
                   <div className="flex items-start gap-3">
@@ -493,6 +497,70 @@ function formatScoreboardName(name: string, shouldStack: boolean) {
 function formatMarginLabel(label: string) {
   const normalized = label.replace(" pt margin", " margin");
   return normalized.startsWith("+") ? normalized : `+${normalized}`;
+}
+
+function MostPointsGameSlide({ slide }: { slide: HomeAnalyticsSlide }) {
+  const holder = slide.stats?.find((stat) => stat.label === "Holder")?.value ?? "Record holder";
+  const opponent = slide.stats?.find((stat) => stat.label === "Opponent")?.value ?? "Opponent";
+  const scoreLine = slide.stats?.find((stat) => stat.label === "Score")?.value ?? "";
+  const dateLabel = slide.stats?.find((stat) => stat.label === "Date")?.value ?? "";
+  const points = slide.rankLabel?.replace(/\s*pts?$/i, "") ?? slide.value;
+
+  return (
+    <Link
+      className="relative block min-h-[158px] rounded-[8px] bg-[#eef0e7] text-[#14232b] outline-none transition hover:scale-[1.003] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bfa66a]"
+      href={slide.href}
+    >
+      <div className="absolute inset-0 rounded-[8px] border border-[#bfa66a]/70" />
+      <div className="pointer-events-none absolute inset-x-4 top-3 h-px bg-[#bfa66a]/70" />
+      <div className="pointer-events-none absolute inset-x-4 bottom-3 h-px bg-[#bfa66a]/45" />
+
+      <div className="relative grid min-h-[158px] content-between gap-2 px-4 py-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#456a7f]">{slide.label}</p>
+            <h2 className="mt-1 text-[1.18rem] font-semibold leading-none text-[#14232b]">{slide.title}</h2>
+          </div>
+          {dateLabel ? <p className="shrink-0 pt-1 text-xs font-semibold text-[#456a7f]">{dateLabel}</p> : null}
+        </div>
+
+        <div className="relative flex items-center justify-center py-0.5">
+          <div className="pointer-events-none absolute left-0 top-1/2 h-px w-[26%] bg-[#bfa66a]/75" />
+          <div className="pointer-events-none absolute right-0 top-1/2 h-px w-[26%] bg-[#bfa66a]/75" />
+          <div className="relative text-center">
+            <p className="text-[4.2rem] font-semibold leading-[0.82] text-[#1e313a] drop-shadow-[0_1px_0_rgba(255,255,255,0.45)]">
+              {points}
+            </p>
+            <p className="-mt-0.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#b0863f]">Points</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-[1fr_auto] items-end gap-3">
+          <div className="min-w-0 rounded-[7px] border border-[#456a7f]/35 bg-white/45 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#456a7f]">Record holder</p>
+            <p className={`mt-0.5 font-semibold leading-tight text-[#14232b] ${recordHolderClass(holder)}`}>{holder}</p>
+          </div>
+          <div className="min-w-[6.7rem] text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#456a7f]">Game</p>
+            <p className="mt-0.5 text-sm font-semibold leading-tight text-[#14232b]">{scoreLine || "N/A"}</p>
+            <p className="text-[11px] font-semibold leading-tight text-[#6f776b]">vs {opponent}</p>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function recordHolderClass(name: string) {
+  if (name.length > 24) {
+    return "text-[0.82rem]";
+  }
+
+  if (name.length > 18) {
+    return "text-[0.9rem]";
+  }
+
+  return "text-base";
 }
 
 function StatTile({

@@ -393,7 +393,12 @@ function buildHomeAnalyticsSlides({
   for (const record of leagueRecords) {
     slides.push({
       href: "/analytics?metric=accolades#accolades",
-      kind: record.id === "biggest-blowout" ? "biggestBlowout" : undefined,
+      kind:
+        record.id === "biggest-blowout"
+          ? "biggestBlowout"
+          : record.id === "most-points-game"
+            ? "mostPointsGame"
+            : undefined,
       label: "Accolade",
       rankLabel: record.valueLabel,
       title: record.title,
