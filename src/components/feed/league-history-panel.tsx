@@ -239,18 +239,18 @@ function HistoricalRankingSlide({ slide }: { slide: HomeAnalyticsSlide }) {
       href={slide.href}
     >
       <div className="absolute inset-0 rounded-[8px] border border-[#d1c49a] bg-[#eef0e7]" />
-      <div className="pointer-events-none absolute inset-x-4 top-4 h-px bg-[#b59657]/70" />
-      <div className="pointer-events-none absolute inset-x-4 bottom-4 h-px bg-[#b59657]/40" />
+      <div className="pointer-events-none absolute inset-x-4 top-3 h-px bg-[#b59657]/70" />
+      <div className="pointer-events-none absolute inset-x-4 bottom-3 h-px bg-[#b59657]/40" />
       <div className="relative grid min-h-[158px] grid-cols-[1fr_auto] items-center gap-3 px-4 py-4">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#4f5b4f]">
             {slide.label}
           </p>
-          <h2 className="mt-2 max-w-[150px] text-2xl font-semibold leading-[1.05] text-[#152116]">
+          <h2 className="mt-2 max-w-[170px] text-[1.45rem] font-semibold leading-[1.02] text-[#152116]">
             {slide.title}
           </h2>
           {slide.rankLabel ? (
-            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#8b691f]">
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#8b691f]">
               {slide.rankLabel}
             </p>
           ) : null}
