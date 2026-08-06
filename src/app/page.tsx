@@ -206,9 +206,6 @@ export default async function Home() {
     latestLinkedTeam && currentTeamLink
       ? buildHomeAnalyticsSlides({
           analyticsRows: analyticsResult.data ?? [],
-          championships: (espnTeamsResult.data ?? []).filter(
-            (team) => team.espn_member_id === currentTeamLink.espn_member_id && team.final_rank === 1,
-          ).length,
           espnMemberId: currentTeamLink.espn_member_id,
           logoUrl: latestLinkedTeam.logo_url,
           matchups: matchupsResult.data ?? [],
@@ -325,7 +322,6 @@ export default async function Home() {
 
 function buildHomeAnalyticsSlides({
   analyticsRows,
-  championships,
   espnMemberId,
   logoUrl,
   matchups,
@@ -333,7 +329,6 @@ function buildHomeAnalyticsSlides({
   teamName,
 }: {
   analyticsRows: AnalyticsResultRow[];
-  championships: number;
   espnMemberId: string;
   logoUrl: string | null;
   matchups: MatchupRow[];
@@ -355,17 +350,22 @@ function buildHomeAnalyticsSlides({
   const slides: HomeAnalyticsSlide[] = [
     {
       href: `/teams/${encodeURIComponent(espnMemberId)}`,
+      kind: "team",
       label: "Your team",
       logoUrl,
-      meta: teamName,
       stats: [
         { label: "Avg finish", value: eraSummary?.averageFinish ? `#${eraSummary.averageFinish}` : "N/A" },
-        { label: "Favorite opponent", value: eraSummary?.favoriteOpponent?.managerLabel ?? "N/A" },
+        {
+          href: eraSummary?.favoriteOpponent?.espnMemberId
+            ? `/teams/${encodeURIComponent(eraSummary.favoriteOpponent.espnMemberId)}`
+            : undefined,
+          label: "Favorite opponent",
+          value: eraSummary?.favoriteOpponent?.managerLabel ?? "N/A",
+        },
       ],
       title: teamName,
-      tone: "teal",
-      value: championships ? `${championships}x` : "Team",
-      rankLabel: championships ? "champion" : "linked",
+      tone: "brown",
+      value: "",
     },
   ];
 

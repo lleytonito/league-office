@@ -120,6 +120,7 @@ export type TeamEraSeason = {
 
 export type TeamEraFavoriteOpponent = {
   averageMargin: number;
+  espnMemberId: string;
   losses: number;
   managerLabel: string;
   pointsFor: number;
@@ -676,6 +677,7 @@ function buildFavoriteOpponent(
 
     return [{
       averageMargin: h2h.averageMargin,
+      espnMemberId: activeTeam.espnMemberId as string,
       losses: h2h.losses,
       managerLabel: activeTeam.ownerDisplayName ?? activeTeam.teamName,
       pointsFor: h2h.pointsFor,

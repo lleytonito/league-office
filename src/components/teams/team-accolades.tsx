@@ -66,9 +66,9 @@ export function TeamAccolades({
           ) : null}
 
           {rankingAccolades.map((accolade) => (
-            <article className="rounded-[9px] border border-[#b9d6e6] bg-[#eef8fc] p-3" key={accolade.label}>
+            <article className={`rounded-[9px] border p-3 ${rankingAccoladeClass(accolade.rank)}`} key={accolade.label}>
               <div className="flex items-center gap-2 text-sm font-semibold text-[#293421]">
-                <Award className="text-[#2f6f8f]" size={15} aria-hidden="true" />
+                {rankingAccoladeIcon(accolade.rank)}
                 {accolade.label}
               </div>
               <p className="mt-2 text-2xl font-semibold text-[#293421]">#{accolade.rank}</p>
@@ -109,6 +109,30 @@ function teamAccoladeIcon(id: AccoladeRecord["id"]) {
   }
 
   return <Medal className="text-[#2f6f8f]" size={15} aria-hidden="true" />;
+}
+
+function rankingAccoladeIcon(rank: number) {
+  if (rank === 1) {
+    return <Trophy className="text-[#b8872f]" size={15} aria-hidden="true" />;
+  }
+
+  if (rank === 2) {
+    return <Medal className="text-[#7b8288]" size={15} aria-hidden="true" />;
+  }
+
+  return <Award className="text-[#a46a3d]" size={15} aria-hidden="true" />;
+}
+
+function rankingAccoladeClass(rank: number) {
+  if (rank === 1) {
+    return "border-[#e2c16d] bg-[#fff8df]";
+  }
+
+  if (rank === 2) {
+    return "border-[#c9cdd2] bg-[#f4f6f7]";
+  }
+
+  return "border-[#d8b693] bg-[#fff3e7]";
 }
 
 function teamAccoladeClass(accent: AccoladeRecord["accent"]) {

@@ -2,17 +2,19 @@
 
 import { BarChart3, ChevronLeft, ChevronRight, UsersRound } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useRef, useState } from "react";
 
 export type HomeAnalyticsSlide = {
   cta?: string;
   href: string;
+  kind?: "metric" | "team";
   label: string;
   logoUrl?: string | null;
   meta?: string;
   rankLabel?: string;
-  stats?: Array<{ label: string; value: string }>;
-  tone?: "blue" | "green" | "red" | "slate" | "teal";
+  stats?: Array<{ href?: string; label: string; value: string }>;
+  tone?: "blue" | "brown" | "green" | "red" | "slate" | "teal";
   title: string;
   value: string;
 };
@@ -79,13 +81,13 @@ export function LeagueHistoryPanel({
         >
           {activeSlide ? (
             <article
-              className={`overflow-hidden rounded-[10px] border p-3 shadow-sm transition-all duration-300 ease-out motion-reduce:transition-none ${
+              className={`min-h-[164px] overflow-hidden rounded-[10px] border p-3 shadow-sm transition-all duration-300 ease-out motion-reduce:transition-none ${
                 direction >= 0 ? "animate-[slideInRight_220ms_ease-out]" : "animate-[slideInLeft_220ms_ease-out]"
               } ${slideTone(activeSlide.tone)}`}
               key={`${activeSlide.title}-${index}`}
               style={dragX ? { transform: `translateX(${dragX}px)` } : undefined}
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
                 {activeSlide.logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -104,27 +106,31 @@ export function LeagueHistoryPanel({
                   >
                     {activeSlide.title}
                   </Link>
-                  <p className="truncate text-sm text-[#ffffffbf]">{activeSlide.meta ?? teamName}</p>
+                  {activeSlide.kind === "team" ? null : (
+                    <p className="truncate text-sm text-[#ffffffbf]">{activeSlide.meta ?? teamName}</p>
+                  )}
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-2xl font-semibold text-white">{activeSlide.value}</p>
-                  {activeSlide.rankLabel ? (
-                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#ffffffbf]">
-                      {activeSlide.rankLabel}
-                    </p>
-                  ) : null}
-                </div>
+                {activeSlide.kind === "team" ? null : (
+                  <div className="shrink-0 text-right">
+                    <p className="text-2xl font-semibold text-white">{activeSlide.value}</p>
+                    {activeSlide.rankLabel ? (
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#ffffffbf]">
+                        {activeSlide.rankLabel}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
               </div>
 
               {activeSlide.stats?.length ? (
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   {activeSlide.stats.map((stat) => (
-                    <div className="rounded-[8px] bg-white/14 p-2 text-white backdrop-blur" key={stat.label}>
+                    <StatTile href={stat.href} key={stat.label}>
                       <p className="truncate text-base font-semibold leading-none">{stat.value}</p>
                       <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#ffffffb8]">
                         {stat.label}
                       </p>
-                    </div>
+                    </StatTile>
                   ))}
                 </div>
               ) : null}
@@ -171,7 +177,7 @@ export function LeagueHistoryPanel({
           ) : null}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 min-[520px]:w-[260px]">
+        <div className="grid grid-cols-2 gap-2">
           <Link
             className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[#aeb9a4] bg-[#e8ede2] px-3 text-sm font-semibold text-[#293421] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] transition hover:bg-[#dfe7d8]"
             href="/members"
@@ -209,5 +215,27 @@ function slideTone(tone: HomeAnalyticsSlide["tone"]) {
     return "border-[#4f9a94] bg-[#245d5a]";
   }
 
+  if (tone === "brown") {
+    return "border-[#8d7154] bg-[#5a4231]";
+  }
+
   return "border-[#658250] bg-[#3f5f36]";
+}
+
+function StatTile({
+  children,
+  href,
+}: {
+  children: ReactNode;
+  href?: string;
+}) {
+  const className = "rounded-[8px] bg-white/14 p-2 text-white backdrop-blur transition hover:bg-white/20";
+
+  return href ? (
+    <Link className={className} href={href}>
+      {children}
+    </Link>
+  ) : (
+    <div className={className}>{children}</div>
+  );
 }
