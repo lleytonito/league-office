@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, ChevronLeft, ChevronRight, Shield, UsersRound } from "lucide-react";
+import { BarChart3, ChevronLeft, ChevronRight, UsersRound } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useRef, useState } from "react";
@@ -234,10 +234,9 @@ function HistoricalRankingSlide({ slide }: { slide: HomeAnalyticsSlide }) {
       className="relative block min-h-[138px] rounded-[8px] text-[#1a2119] outline-none transition hover:scale-[1.005] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ead7a2]"
       href={slide.href}
     >
-      <div className="absolute inset-0 rounded-[8px] bg-[#6f7767]" />
-      <div className="absolute inset-[1px] rounded-[7px] border border-[#cbb780]/65 bg-[#eef0e7]" />
-      <div className="pointer-events-none absolute inset-x-3 top-3 h-px bg-[#b59657]/75" />
-      <div className="pointer-events-none absolute inset-x-3 bottom-3 h-px bg-[#b59657]/45" />
+      <div className="absolute inset-0 rounded-[8px] border border-[#6f7767] bg-[#eef0e7]" />
+      <div className="pointer-events-none absolute inset-x-4 top-3 h-px bg-[#b59657]/70" />
+      <div className="pointer-events-none absolute inset-x-4 bottom-3 h-px bg-[#b59657]/40" />
       <div className="relative grid min-h-[138px] grid-cols-[1fr_auto] items-center gap-3 px-4 py-3">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#4f5b4f]">
@@ -247,14 +246,14 @@ function HistoricalRankingSlide({ slide }: { slide: HomeAnalyticsSlide }) {
             {slide.title}
           </h2>
           {slide.rankLabel ? (
-            <span className="mt-3 inline-flex h-8 items-center rounded-full border border-[#b59657] bg-[#536056] px-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#f3dfa9]">
+            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#566252]">
               {slide.rankLabel}
-            </span>
+            </p>
           ) : null}
         </div>
-        <div className="relative flex h-[106px] w-[96px] items-center justify-center">
-          <div className="absolute inset-x-2 top-1 h-[96px] rounded-[24px] border border-[#b59657] bg-[#344333] shadow-[inset_0_0_0_2px_rgba(255,255,255,0.08)] [clip-path:polygon(50%_0%,94%_18%,84%_84%,50%_100%,16%_84%,6%_18%)]" />
-          <Shield className="absolute inset-0 m-auto text-[#435241]" size={86} strokeWidth={1.15} aria-hidden="true" />
+        <div className="relative flex h-[98px] w-[112px] items-center justify-center">
+          <div className="absolute inset-y-1 inset-x-0 rounded-[30px] border border-[#b59657] bg-[#344333] shadow-[inset_0_0_0_2px_rgba(255,255,255,0.08)] [clip-path:polygon(14%_0%,86%_0%,100%_50%,86%_100%,14%_100%,0%_50%)]" />
+          <div className="absolute inset-y-4 inset-x-5 rounded-[22px] border border-[#55664f] [clip-path:polygon(14%_0%,86%_0%,100%_50%,86%_100%,14%_100%,0%_50%)]" />
           <span className="relative text-5xl font-semibold leading-none text-white drop-shadow-sm">
             {slide.value}
           </span>
