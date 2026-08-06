@@ -303,7 +303,7 @@ function TeamSummarySlide({ slide }: { slide: HomeAnalyticsSlide }) {
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6d5137]">{slide.label}</p>
           <Link
-            className={`mt-2 block max-w-full truncate rounded-[6px] pb-0.5 font-semibold leading-[1.08] text-[#4b382b] outline-none transition hover:text-[#2e221b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b59657] ${
+            className={`mt-2 block max-w-full whitespace-nowrap rounded-[6px] pb-0.5 font-semibold leading-[1.12] text-[#4b382b] outline-none transition hover:text-[#2e221b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b59657] ${
               teamTitleClass(slide.title)
             }`}
             href={slide.href}
@@ -330,7 +330,7 @@ function TeamStatTile({
   stat: NonNullable<HomeAnalyticsSlide["stats"]>[number];
 }) {
   const contents = (
-    <>
+    <div className="relative z-10">
       <p className={`font-semibold leading-none text-[#f2e8d3] ${teamStatValueClass(stat.value, emphasis)}`}>
         {stat.value}
       </p>
@@ -338,28 +338,41 @@ function TeamStatTile({
         {stat.label}
       </p>
       {stat.detail ? <p className="mt-1 truncate text-[11px] font-semibold text-[#b59657]">{stat.detail}</p> : null}
-    </>
+    </div>
   );
 
   const className =
-    "relative min-h-[64px] overflow-hidden rounded-[8px] border border-[#8a6a4c] bg-[#5a4231] p-3 shadow-[inset_0_1px_0_rgba(242,232,211,0.08)] transition before:absolute before:inset-x-3 before:top-2 before:h-px before:bg-[#b59657]/35 after:absolute after:bottom-2 after:right-3 after:h-4 after:w-px after:bg-[#b59657]/28 hover:bg-[#654b38]";
+    "relative min-h-[64px] rounded-[8px] border border-[#8a6a4c] bg-[#5a4231] p-3 shadow-[inset_0_1px_0_rgba(242,232,211,0.08)] transition hover:bg-[#654b38]";
+  const framedContents = (
+    <>
+      <svg aria-hidden="true" className="pointer-events-none absolute inset-2 h-[calc(100%-1rem)] w-[calc(100%-1rem)]">
+        <path d="M1 1H92" stroke="#B59657" strokeOpacity="0.34" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+        <path d="M92 36V50" stroke="#B59657" strokeOpacity="0.28" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+      </svg>
+      {contents}
+    </>
+  );
 
   return stat.href ? (
     <Link className={className} href={stat.href}>
-      {contents}
+      {framedContents}
     </Link>
   ) : (
-    <div className={className}>{contents}</div>
+    <div className={className}>{framedContents}</div>
   );
 }
 
 function teamTitleClass(title: string) {
+  if (title.length > 36) {
+    return "text-[1.05rem]";
+  }
+
   if (title.length > 30) {
-    return "text-[1.45rem]";
+    return "text-[1.2rem]";
   }
 
   if (title.length > 22) {
-    return "text-[1.75rem]";
+    return "text-[1.55rem]";
   }
 
   return "text-3xl";
@@ -405,14 +418,14 @@ function BiggestBlowoutSlide({ slide }: { slide: HomeAnalyticsSlide }) {
           {dateLabel ? <p className="shrink-0 pt-1 text-xs font-semibold text-[#8a4638]">{dateLabel}</p> : null}
         </div>
 
-        <div className="relative">
+        <div className="relative pb-3">
         <div className="grid grid-cols-2 items-stretch gap-0 overflow-hidden rounded-[8px] border border-[#c7924b] bg-[#3e201b] shadow-[inset_0_1px_0_rgba(245,232,215,0.08)]">
-          <div className="min-w-0 border-r border-[#c7924b]/55 bg-[#8a4638] px-3 py-2.5">
+          <div className="min-w-0 border-r border-[#c7924b]/55 bg-[#8a4638] py-2.5 pl-3 pr-7">
             <p className={`font-semibold leading-none text-[#f5e8d7] ${blowoutNameClass(holder)}`}>{holder}</p>
             <p className="mt-1.5 text-[2rem] font-semibold leading-none text-[#f5e8d7]">{holderScore || "N/A"}</p>
           </div>
 
-          <div className="min-w-0 bg-[#3e201b] px-3 py-2.5 text-right">
+          <div className="min-w-0 bg-[#3e201b] py-2.5 pl-7 pr-3 text-right">
             <p className={`font-semibold leading-none text-[#d8b9a7] ${blowoutNameClass(opponent)}`}>
               {opponent}
             </p>
@@ -425,7 +438,7 @@ function BiggestBlowoutSlide({ slide }: { slide: HomeAnalyticsSlide }) {
         </div>
 
         {slide.rankLabel ? (
-          <div className="relative left-1/2 z-10 -mt-2 inline-flex -translate-x-1/2 rounded-full border border-[#9b6c35] bg-[#c7924b] px-4 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-[#3e201b] shadow-sm">
+          <div className="absolute bottom-0 left-1/2 z-10 inline-flex -translate-x-1/2 rounded-full border border-[#9b6c35] bg-[#c7924b] px-4 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-[#3e201b] shadow-sm">
             {formatMarginLabel(slide.rankLabel)}
           </div>
         ) : null}
