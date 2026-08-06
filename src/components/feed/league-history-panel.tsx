@@ -149,10 +149,10 @@ export function LeagueHistoryPanel({
           )}
 
           {slides.length > 1 ? (
-            <div className="flex items-center justify-between gap-3 px-1">
+            <div className="flex items-center justify-center gap-3 px-1 sm:justify-between">
               <button
                 aria-label="Previous team stat"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-[#c8d1be] bg-white text-[#293421] transition hover:bg-[#f7f8f4]"
+                className="hidden h-10 w-10 items-center justify-center rounded-full border border-[#c8d1be] bg-white text-[#293421] transition hover:bg-[#f7f8f4] sm:flex"
                 onClick={goToPrevious}
                 type="button"
               >
@@ -173,7 +173,7 @@ export function LeagueHistoryPanel({
               </div>
               <button
                 aria-label="Next team stat"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-[#c8d1be] bg-white text-[#293421] transition hover:bg-[#f7f8f4]"
+                className="hidden h-10 w-10 items-center justify-center rounded-full border border-[#c8d1be] bg-white text-[#293421] transition hover:bg-[#f7f8f4] sm:flex"
                 onClick={goToNext}
                 type="button"
               >
