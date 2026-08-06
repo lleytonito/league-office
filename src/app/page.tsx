@@ -406,7 +406,10 @@ function buildHomeAnalyticsSlides({
       stats: [
         {
           label: "Holder",
-          value: record.id === "biggest-blowout" ? record.holderLabel : (record.holderLabel.split(" ")[0] ?? record.holderLabel),
+          value:
+            record.id === "biggest-blowout" || record.id === "most-points-game"
+              ? record.holderLabel
+              : (record.holderLabel.split(" ")[0] ?? record.holderLabel),
         },
         { label: "Opponent", value: record.opponentLabel ?? "Opponent" },
         { label: "Score", value: record.scoreLine ?? record.valueLabel },
