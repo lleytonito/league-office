@@ -87,7 +87,7 @@ export function LeagueHistoryPanel({
                 activeSlide.kind === "historicalRanking"
                   ? "border-[#8c8266] bg-[#837b67] p-[2px]"
                   : activeSlide.kind === "team"
-                    ? "border-[#8c8266] bg-[#837b67] p-[2px]"
+                    ? "border-[#8a6a4c] bg-[#5a4231] p-[2px]"
                     : activeSlide.kind === "biggestBlowout"
                       ? "border-[#a46a54] bg-[#7f4638] p-[2px]"
                   : `${slideTone(activeSlide.tone)} p-3`
@@ -299,11 +299,11 @@ function TeamSummarySlide({ slide }: { slide: HomeAnalyticsSlide }) {
       <div className="absolute inset-0 rounded-[8px] border border-[#d1c49a]" />
       <div className="pointer-events-none absolute inset-x-4 top-3 h-px bg-[#b59657]/70" />
       <div className="pointer-events-none absolute inset-x-4 bottom-3 h-px bg-[#b59657]/40" />
-      <div className="relative grid min-h-[158px] content-between gap-2 p-4">
+      <div className="relative grid min-h-[158px] content-between gap-2 px-4 pb-4 pt-[1.05rem]">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6d5137]">{slide.label}</p>
           <Link
-            className={`mt-3 block max-w-full truncate rounded-[6px] font-semibold leading-[1.02] text-[#4b382b] outline-none transition hover:text-[#2e221b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b59657] ${
+            className={`mt-2 block max-w-full truncate rounded-[6px] pb-0.5 font-semibold leading-[1.08] text-[#4b382b] outline-none transition hover:text-[#2e221b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b59657] ${
               teamTitleClass(slide.title)
             }`}
             href={slide.href}
@@ -342,7 +342,7 @@ function TeamStatTile({
   );
 
   const className =
-    "min-h-[64px] rounded-[8px] border border-[#8a6a4c] bg-[#5a4231] p-3 shadow-[inset_0_1px_0_rgba(242,232,211,0.08)] transition hover:bg-[#654b38]";
+    "relative min-h-[64px] overflow-hidden rounded-[8px] border border-[#8a6a4c] bg-[#5a4231] p-3 shadow-[inset_0_1px_0_rgba(242,232,211,0.08)] transition before:absolute before:inset-x-3 before:top-2 before:h-px before:bg-[#b59657]/35 after:absolute after:bottom-2 after:right-3 after:h-4 after:w-px after:bg-[#b59657]/28 hover:bg-[#654b38]";
 
   return stat.href ? (
     <Link className={className} href={stat.href}>
@@ -405,39 +405,43 @@ function BiggestBlowoutSlide({ slide }: { slide: HomeAnalyticsSlide }) {
           {dateLabel ? <p className="shrink-0 pt-1 text-xs font-semibold text-[#8a4638]">{dateLabel}</p> : null}
         </div>
 
-        <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-0 overflow-hidden rounded-[8px] border border-[#8a4638]/55 bg-[#3e201b]">
-          <div className="min-w-0 border-r border-[#c7924b]/55 bg-[#8a4638] p-3">
-            <div className="mb-2 inline-flex rounded-[4px] bg-[#c7924b] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#3e201b]">
-              Record holder
-            </div>
-            <p className={`truncate font-semibold leading-none text-[#f5e8d7] ${blowoutNameClass(holder)}`}>{holder}</p>
-            <p className="mt-2 text-[2.2rem] font-semibold leading-none text-[#f5e8d7]">{holderScore || "N/A"}</p>
+        <div className="relative">
+        <div className="grid grid-cols-2 items-stretch gap-0 overflow-hidden rounded-[8px] border border-[#c7924b] bg-[#3e201b] shadow-[inset_0_1px_0_rgba(245,232,215,0.08)]">
+          <div className="min-w-0 border-r border-[#c7924b]/55 bg-[#8a4638] px-3 py-2.5">
+            <p className={`font-semibold leading-none text-[#f5e8d7] ${blowoutNameClass(holder)}`}>{holder}</p>
+            <p className="mt-1.5 text-[2rem] font-semibold leading-none text-[#f5e8d7]">{holderScore || "N/A"}</p>
           </div>
 
-          <div className="flex w-9 items-center justify-center bg-[#4a251f] text-xs font-semibold text-[#c7924b]">VS</div>
-
-          <div className="min-w-0 bg-[#3e201b] p-3 text-right">
-            <div className="mb-2 h-[26px]" />
-            <p className={`truncate font-semibold leading-none text-[#d8b9a7] ${blowoutNameClass(opponent)}`}>
+          <div className="min-w-0 bg-[#3e201b] px-3 py-2.5 text-right">
+            <p className={`font-semibold leading-none text-[#d8b9a7] ${blowoutNameClass(opponent)}`}>
               {opponent}
             </p>
-            <p className="mt-2 text-[2.2rem] font-semibold leading-none text-[#d8b9a7]">{opponentScore || "N/A"}</p>
+            <p className="mt-1.5 text-[2rem] font-semibold leading-none text-[#d8b9a7]">{opponentScore || "N/A"}</p>
+          </div>
+
+          <div className="absolute left-1/2 top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[#c7924b] bg-[#4a251f] text-[10px] font-semibold text-[#c7924b] shadow-sm">
+            VS
           </div>
         </div>
 
         {slide.rankLabel ? (
-          <div className="mx-auto -mt-1 inline-flex rounded-full border border-[#9b6c35] bg-[#c7924b] px-4 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-[#3e201b] shadow-sm">
-            {slide.rankLabel.replace(" pt margin", " margin")}
+          <div className="relative z-10 mx-auto -mt-2 inline-flex rounded-full border border-[#9b6c35] bg-[#c7924b] px-4 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-[#3e201b] shadow-sm">
+            {formatMarginLabel(slide.rankLabel)}
           </div>
         ) : null}
+        </div>
       </div>
     </Link>
   );
 }
 
 function blowoutNameClass(value: string) {
+  if (value.length > 22) {
+    return "text-[0.72rem]";
+  }
+
   if (value.length > 18) {
-    return "text-[0.85rem]";
+    return "text-xs";
   }
 
   if (value.length > 14) {
@@ -445,6 +449,11 @@ function blowoutNameClass(value: string) {
   }
 
   return "text-base";
+}
+
+function formatMarginLabel(label: string) {
+  const normalized = label.replace(" pt margin", " margin");
+  return normalized.startsWith("+") ? normalized : `+${normalized}`;
 }
 
 function StatTile({
