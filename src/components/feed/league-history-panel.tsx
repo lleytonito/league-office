@@ -13,7 +13,7 @@ export type HomeAnalyticsSlide = {
   logoUrl?: string | null;
   meta?: string;
   rankLabel?: string;
-  stats?: Array<{ href?: string; label: string; value: string }>;
+  stats?: Array<{ detail?: string; href?: string; label: string; value: string }>;
   tone?: "blue" | "brown" | "green" | "red" | "slate" | "teal";
   title: string;
   value: string;
@@ -86,6 +86,8 @@ export function LeagueHistoryPanel({
               } ${
                 activeSlide.kind === "historicalRanking"
                   ? "border-[#8c8266] bg-[#837b67] p-[2px]"
+                  : activeSlide.kind === "team"
+                    ? "border-[#8a6a4c] bg-[#3f3027] p-[2px]"
                   : `${slideTone(activeSlide.tone)} p-3`
               }`}
               key={`${activeSlide.title}-${index}`}
@@ -93,6 +95,8 @@ export function LeagueHistoryPanel({
             >
               {activeSlide.kind === "historicalRanking" ? (
                 <HistoricalRankingSlide slide={activeSlide} />
+              ) : activeSlide.kind === "team" ? (
+                <TeamSummarySlide slide={activeSlide} />
               ) : (
                 <>
                   <div className="flex items-start gap-3">
@@ -114,20 +118,16 @@ export function LeagueHistoryPanel({
                       >
                         {activeSlide.title}
                       </Link>
-                      {activeSlide.kind === "team" ? null : (
-                        <p className="truncate text-sm text-[#ffffffbf]">{activeSlide.meta ?? teamName}</p>
-                      )}
+                      <p className="truncate text-sm text-[#ffffffbf]">{activeSlide.meta ?? teamName}</p>
                     </div>
-                    {activeSlide.kind === "team" ? null : (
-                      <div className="shrink-0 text-right">
-                        <p className="text-2xl font-semibold text-white">{activeSlide.value}</p>
-                        {activeSlide.rankLabel ? (
-                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#ffffffbf]">
-                            {activeSlide.rankLabel}
-                          </p>
-                        ) : null}
-                      </div>
-                    )}
+                    <div className="shrink-0 text-right">
+                      <p className="text-2xl font-semibold text-white">{activeSlide.value}</p>
+                      {activeSlide.rankLabel ? (
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#ffffffbf]">
+                          {activeSlide.rankLabel}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
 
                   {activeSlide.stats?.length ? (
@@ -285,6 +285,84 @@ function HistoricalRankingSlide({ slide }: { slide: HomeAnalyticsSlide }) {
       </div>
     </Link>
   );
+}
+
+function TeamSummarySlide({ slide }: { slide: HomeAnalyticsSlide }) {
+  const [firstStat, secondStat] = slide.stats ?? [];
+
+  return (
+    <div className="relative block min-h-[158px] rounded-[8px] bg-[#4b382b] text-[#f2e8d3]">
+      <div className="absolute inset-0 rounded-[8px] border border-[#8a6a4c]" />
+      <div className="pointer-events-none absolute inset-x-4 top-4 h-px bg-[#b59657]/60" />
+      <div className="pointer-events-none absolute right-4 top-4 flex gap-1">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#b59657]" />
+        <span className="h-1.5 w-1.5 rounded-full bg-[#b59657]/70" />
+        <span className="h-1.5 w-1.5 rounded-full bg-[#b59657]/45" />
+      </div>
+      <div className="relative grid min-h-[158px] content-between gap-3 p-4">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b59657]">{slide.label}</p>
+          <Link
+            className={`mt-3 block max-w-full truncate rounded-[6px] font-semibold leading-[1.02] text-[#f2e8d3] outline-none transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b59657] ${
+              teamTitleClass(slide.title)
+            }`}
+            href={slide.href}
+          >
+            {slide.title}
+          </Link>
+          <div className="mt-3 h-px w-full bg-[#b59657]/70">
+            <div className="mx-auto h-[3px] w-8 -translate-y-px rounded-full bg-[#b59657]" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          {firstStat ? <TeamStatTile stat={firstStat} emphasis /> : null}
+          {secondStat ? <TeamStatTile stat={secondStat} /> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TeamStatTile({
+  emphasis = false,
+  stat,
+}: {
+  emphasis?: boolean;
+  stat: NonNullable<HomeAnalyticsSlide["stats"]>[number];
+}) {
+  const contents = (
+    <>
+      <p className={`truncate font-semibold leading-none ${emphasis ? "text-3xl text-[#f2e8d3]" : "text-lg text-[#f2e8d3]"}`}>
+        {stat.value}
+      </p>
+      <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.13em] text-[#c9bca4]">{stat.label}</p>
+      {stat.detail ? <p className="mt-1 truncate text-[11px] font-semibold text-[#b59657]">{stat.detail}</p> : null}
+    </>
+  );
+
+  const className =
+    "min-h-[70px] rounded-[8px] border border-[#8a6a4c] bg-[#735a43]/58 p-3 shadow-[inset_0_1px_0_rgba(242,232,211,0.08)] transition hover:bg-[#735a43]/75";
+
+  return stat.href ? (
+    <Link className={className} href={stat.href}>
+      {contents}
+    </Link>
+  ) : (
+    <div className={className}>{contents}</div>
+  );
+}
+
+function teamTitleClass(title: string) {
+  if (title.length > 30) {
+    return "text-[1.45rem]";
+  }
+
+  if (title.length > 22) {
+    return "text-[1.75rem]";
+  }
+
+  return "text-3xl";
 }
 
 function StatTile({
