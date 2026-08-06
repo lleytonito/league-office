@@ -425,7 +425,7 @@ function BiggestBlowoutSlide({ slide }: { slide: HomeAnalyticsSlide }) {
         </div>
 
         {slide.rankLabel ? (
-          <div className="relative z-10 mx-auto -mt-2 inline-flex rounded-full border border-[#9b6c35] bg-[#c7924b] px-4 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-[#3e201b] shadow-sm">
+          <div className="relative left-1/2 z-10 -mt-2 inline-flex -translate-x-1/2 rounded-full border border-[#9b6c35] bg-[#c7924b] px-4 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-[#3e201b] shadow-sm">
             {formatMarginLabel(slide.rankLabel)}
           </div>
         ) : null}
