@@ -1,9 +1,12 @@
 import { AppHeader } from "@/components/layout/app-header";
 import { LoginWall } from "@/components/auth/login-wall";
 import { HomeActionPanel } from "@/components/feed/home-action-panel";
-import { LeagueHistoryPanel } from "@/components/feed/league-history-panel";
+import { LeagueHistoryPanel, type HomeAnalyticsSlide } from "@/components/feed/league-history-panel";
 import { TeamLinkPrompt } from "@/components/feed/team-link-prompt";
 import { ProposalFeedCard, type FeedProposal } from "@/components/proposals/proposal-feed-card";
+import type { AccoladeRecord } from "@/components/analytics/accolades-card";
+import type { AllTimeRankingRow } from "@/components/analytics/all-time-rankings-card";
+import type { AveragePointsRow } from "@/components/analytics/average-points-card";
 import { badgesForMember, type MemberBadge, type MemberBadgeAward } from "@/lib/members/badges";
 import { createClient } from "@/lib/supabase/server";
 import { Megaphone, Plus } from "lucide-react";
@@ -62,6 +65,14 @@ type TeamLinkRow = {
   member_id: string;
 };
 
+type AnalyticsResultRow = {
+  metric_key: string;
+  payload: {
+    records?: AccoladeRecord[];
+    rankings?: Array<AllTimeRankingRow | AveragePointsRow>;
+  };
+};
+
 const signedInProposalSelect =
   "id, title, summary, status, is_pinned, pinned_at, published_at, voting_closes_at, closed_at, passed, created_at, author:league_members!proposals_author_member_id_fkey(id, display_name, team_name, avatar_color), options:proposal_vote_options(id, label, sort_order), window:voting_windows!voting_windows_proposal_id_fkey(starts_at, ends_at, closed_at)";
 
@@ -94,6 +105,7 @@ export default async function Home() {
     proposalsResult,
     votesResult,
     homeActionsResult,
+    analyticsResult,
     espnTeamsResult,
     teamLinksResult,
   ] = await Promise.all([
@@ -131,6 +143,13 @@ export default async function Home() {
       .maybeSingle<HomeActionsSetting>(),
     member
       ? supabase
+          .from("analytics_results")
+          .select("metric_key, payload")
+          .in("metric_key", ["all-time-rankings", "average-points", "accolades"])
+          .returns<AnalyticsResultRow[]>()
+      : Promise.resolve({ data: [] as AnalyticsResultRow[] }),
+    member
+      ? supabase
           .from("espn_teams")
           .select("season, espn_member_id, owner_display_name, team_name, logo_url")
           .not("espn_member_id", "is", null)
@@ -154,6 +173,14 @@ export default async function Home() {
   const latestLinkedTeam = currentTeamLink
     ? (espnTeamsResult.data ?? []).find((team) => team.espn_member_id === currentTeamLink.espn_member_id) ?? null
     : null;
+  const homeAnalyticsSlides =
+    latestLinkedTeam && currentTeamLink
+      ? buildHomeAnalyticsSlides({
+          analyticsRows: analyticsResult.data ?? [],
+          espnMemberId: currentTeamLink.espn_member_id,
+          teamName: latestLinkedTeam.team_name,
+        })
+      : [];
   const teamLinkPromptOptions =
     member && isMemberActive && !(teamLinksResult.data ?? []).some((link) => link.member_id === member.id)
       ? unlinkedCurrentTeams(espnTeamsResult.data ?? [], teamLinksResult.data ?? [])
@@ -220,6 +247,7 @@ export default async function Home() {
 
           {latestLinkedTeam && showLeagueHistoryActions ? (
             <LeagueHistoryPanel
+              slides={homeAnalyticsSlides}
               teamName={latestLinkedTeam.team_name}
             />
           ) : null}
@@ -258,6 +286,68 @@ export default async function Home() {
       </section>
     </main>
   );
+}
+
+function buildHomeAnalyticsSlides({
+  analyticsRows,
+  espnMemberId,
+  teamName,
+}: {
+  analyticsRows: AnalyticsResultRow[];
+  espnMemberId: string;
+  teamName: string;
+}): HomeAnalyticsSlide[] {
+  const byKey = new Map(analyticsRows.map((row) => [row.metric_key, row]));
+  const allTimeRank = findRank(byKey.get("all-time-rankings")?.payload.rankings, espnMemberId);
+  const averagePointsRank = findRank(byKey.get("average-points")?.payload.rankings, espnMemberId);
+  const records = byKey.get("accolades")?.payload.records?.filter((record) => record.espnMemberId === espnMemberId) ?? [];
+  const slides: HomeAnalyticsSlide[] = [
+    {
+      href: `/teams/${encodeURIComponent(espnMemberId)}`,
+      label: "Your team",
+      title: teamName,
+      value: records.length ? `${records.length}` : "Live",
+      rankLabel: records.length ? "accolade" + (records.length === 1 ? "" : "s") : "linked",
+    },
+  ];
+
+  if (allTimeRank) {
+    slides.push({
+      href: "/analytics#historical-rankings",
+      label: "All-time power",
+      rankLabel: "PWR",
+      title: "Historical ranking",
+      value: `#${allTimeRank.index + 1}`,
+    });
+  }
+
+  if (averagePointsRank) {
+    const row = averagePointsRank.row as AveragePointsRow;
+    slides.push({
+      href: "/analytics#average-points",
+      label: "Scoring pace",
+      rankLabel: `${row.averagePoints.toLocaleString()} AVG`,
+      title: "Average points scored",
+      value: `#${averagePointsRank.index + 1}`,
+    });
+  }
+
+  for (const record of records) {
+    slides.push({
+      href: "/analytics#accolades",
+      label: "Accolade",
+      rankLabel: record.valueLabel,
+      title: record.title,
+      value: "Record",
+    });
+  }
+
+  return slides;
+}
+
+function findRank(rows: AnalyticsResultRow["payload"]["rankings"], espnMemberId: string) {
+  const index = (rows ?? []).findIndex((row) => row.espnMemberId === espnMemberId);
+  return index >= 0 ? { index, row: (rows ?? [])[index] } : null;
 }
 
 function uniqueStrings(values: Array<string | null | undefined>) {

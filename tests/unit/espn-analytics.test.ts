@@ -1,5 +1,7 @@
 import {
   buildAllTimeRanking,
+  buildAccoladeRecords,
+  buildAveragePointsRanking,
   buildHeadToHead,
   buildLuckIndex,
   buildTeamEraSummary,
@@ -154,6 +156,82 @@ describe("ESPN analytics", () => {
     });
   });
 
+  it("ranks active teams by average ESPN season points", () => {
+    const completedTeams = [
+      team({ espnMemberId: "active-a", finalRank: 4, points: 400, season: 2025, teamName: "Alpha" }),
+      team({ espnMemberId: "active-b", finalRank: 1, points: 300, season: 2025, teamName: "Bravo" }),
+      team({ espnMemberId: "inactive-c", finalRank: 2, points: 900, season: 2025, teamName: "Charlie" }),
+      team({ espnMemberId: "active-a", finalRank: 2, points: 200, season: 2024, teamName: "Alpha Old" }),
+      team({ espnMemberId: "active-b", finalRank: 3, points: 500, season: 2024, teamName: "Bravo Old" }),
+    ];
+    const currentTeams = [
+      team({ espnMemberId: "active-a", finalRank: 0, points: 0, season: 2026, teamName: "Alpha Now" }),
+      team({ espnMemberId: "active-b", finalRank: 0, points: 0, season: 2026, teamName: "Bravo Now" }),
+    ];
+    const ranking = buildAveragePointsRanking(completedTeams, [...completedTeams, ...currentTeams]);
+
+    expect(ranking.map((row) => row.espnMemberId)).toEqual(["active-b", "active-a"]);
+    expect(ranking[0]).toMatchObject({
+      averagePoints: 400,
+      latestTeamName: "Bravo Now",
+      seasonsPlayed: 2,
+      totalPoints: 800,
+    });
+  });
+
+  it("builds active-team accolade records from matchup history", () => {
+    const teams = [
+      team({ espnMemberId: "active-a", finalRank: 1, season: 2025, teamName: "Alpha" }),
+      team({ espnMemberId: "active-b", finalRank: 2, season: 2025, teamName: "Bravo" }),
+      team({ espnMemberId: "inactive-c", finalRank: 3, season: 2025, teamName: "Charlie" }),
+      team({ espnMemberId: "active-a", finalRank: 0, season: 2026, teamName: "Alpha Now" }),
+      team({ espnMemberId: "active-b", finalRank: 0, season: 2026, teamName: "Bravo Now" }),
+    ];
+    const records = buildAccoladeRecords(teams, [
+      matchup({
+        awayScore: 60,
+        awayTeamId: teamIdFor("active-b"),
+        homeScore: 140,
+        homeTeamId: teamIdFor("active-a"),
+        season: 2025,
+      }),
+      matchup({
+        awayScore: 20,
+        awayTeamId: teamIdFor("active-a"),
+        homeScore: 200,
+        homeTeamId: teamIdFor("inactive-c"),
+        season: 2025,
+      }),
+      matchup({
+        awayScore: 130,
+        awayTeamId: teamIdFor("active-b"),
+        homeScore: 120,
+        homeTeamId: teamIdFor("active-a"),
+        playoffTierType: "WINNERS_BRACKET",
+        season: 2025,
+        winner: "AWAY",
+      }),
+    ]);
+
+    expect(records.map((record) => record.id).sort()).toEqual([
+      "biggest-blowout",
+      "most-points-game",
+      "playoff-run",
+    ]);
+    expect(records.find((record) => record.id === "biggest-blowout")).toMatchObject({
+      espnMemberId: "active-a",
+      value: 80,
+    });
+    expect(records.find((record) => record.id === "most-points-game")).toMatchObject({
+      espnMemberId: "active-a",
+      value: 140,
+    });
+    expect(records.find((record) => record.id === "playoff-run")).toMatchObject({
+      espnMemberId: "active-b",
+      value: 130,
+    });
+  });
+
   it("builds a team era summary with favorite active opponent", () => {
     const targetTeams = [
       team({ espnMemberId: "target", finalRank: 1, season: 2024, teamName: "Target Old" }),
@@ -222,6 +300,7 @@ function matchup(overrides: {
   awayTeamId: number;
   homeScore: number;
   homeTeamId: number;
+  playoffTierType?: string | null;
   season: number;
   winner?: string;
 }) {
@@ -232,7 +311,7 @@ function matchup(overrides: {
     homeScore: overrides.homeScore,
     homeTeamId: overrides.homeTeamId,
     matchupPeriodId: 1,
-    playoffTierType: null,
+    playoffTierType: overrides.playoffTierType ?? null,
     season: overrides.season,
     winner: overrides.winner ?? "HOME",
   };

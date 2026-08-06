@@ -1,4 +1,5 @@
 import { LoginWall } from "@/components/auth/login-wall";
+import type { AccoladeRecord } from "@/components/analytics/accolades-card";
 import { AppHeader } from "@/components/layout/app-header";
 import { SeasonFinishes } from "@/components/teams/season-finishes";
 import { TeamEraCard } from "@/components/teams/team-era-card";
@@ -11,7 +12,7 @@ import {
   type NormalizedEspnTeam,
 } from "@/lib/espn/analytics";
 import { createClient } from "@/lib/supabase/server";
-import { ArrowLeft, Link2, Swords } from "lucide-react";
+import { ArrowLeft, Flame, Link2, Medal, Shield, Sparkles, Swords } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -60,12 +61,21 @@ type MatchupRow = {
   winner: string | null;
 };
 
+type AnalyticsResultRow = {
+  payload: {
+    records?: AccoladeRecord[];
+  };
+};
+
 export default async function TeamProfilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ espnMemberId: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { espnMemberId } = await params;
+  const { from } = await searchParams;
   const decodedEspnMemberId = decodeURIComponent(espnMemberId);
   const supabase = await createClient();
   const {
@@ -88,6 +98,7 @@ export default async function TeamProfilePage({
     { data: currentLink },
     { data: allLinkedTeams },
     { data: matchups },
+    { data: accoladeResult },
   ] = await Promise.all([
     supabase
       .from("espn_teams")
@@ -117,6 +128,11 @@ export default async function TeamProfilePage({
         "season, espn_matchup_id, matchup_period_id, home_team_id, away_team_id, home_score, away_score, winner, playoff_tier_type",
       )
       .returns<MatchupRow[]>(),
+    supabase
+      .from("analytics_results")
+      .select("payload")
+      .eq("metric_key", "accolades")
+      .maybeSingle<AnalyticsResultRow>(),
   ]);
 
   if (!targetTeams?.length) {
@@ -144,14 +160,19 @@ export default async function TeamProfilePage({
     matchups: normalizedMatchups,
     targetTeams: normalizedTargetTeams,
   });
+  const teamAccolades =
+    accoladeResult?.payload?.records?.filter((record) => record.espnMemberId === decodedEspnMemberId) ?? [];
 
   return (
     <main className="min-h-dvh bg-[#f7f8f4] text-[#111411]">
       <AppHeader member={currentMember} userEmail={user.email ?? null} />
       <section className="mx-auto grid w-full max-w-3xl gap-4 px-4 py-4 sm:px-6">
-        <Link className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-[#3e4a36]" href="/members">
+        <Link
+          className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-[#3e4a36]"
+          href={from === "analytics" ? "/analytics" : "/members"}
+        >
           <ArrowLeft size={16} aria-hidden="true" />
-          Teams
+          {from === "analytics" ? "Analytics" : "Teams"}
         </Link>
 
         <article className="overflow-hidden rounded-[10px] border border-[#d9decf] bg-white shadow-sm">
@@ -209,12 +230,75 @@ export default async function TeamProfilePage({
           </section>
         ) : null}
 
+        <TeamAccolades records={teamAccolades} />
+
         <TeamEraCard summary={eraSummary} />
 
         <SeasonFinishes teams={targetTeams} />
       </section>
     </main>
   );
+}
+
+function TeamAccolades({ records }: { records: AccoladeRecord[] }) {
+  return (
+    <section className="rounded-[10px] border border-[#d9decf] bg-white p-5 shadow-sm" id="accolades">
+      <div className="flex items-center gap-2">
+        <Sparkles className="text-[#b8872f]" size={18} aria-hidden="true" />
+        <h2 className="text-xl font-semibold">Accolades</h2>
+      </div>
+
+      {records.length ? (
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          {records.map((record) => (
+            <article className={`rounded-[9px] border p-3 ${teamAccoladeClass(record.accent)}`} key={record.id}>
+              <div className="flex items-center gap-2 text-sm font-semibold text-[#293421]">
+                {teamAccoladeIcon(record.id)}
+                {record.title}
+              </div>
+              <p className="mt-2 text-2xl font-semibold text-[#293421]">{record.valueLabel}</p>
+              <p className="mt-1 text-sm leading-6 text-[#626b59]">
+                {record.scoreLine ? `${record.scoreLine} - ` : ""}
+                {record.matchupLabel}
+              </p>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-4 rounded-[10px] border border-dashed border-[#d9decf] bg-[#fbfcf8] p-4 text-sm leading-6 text-[#626b59]">
+          No active record accolades yet.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function teamAccoladeIcon(id: AccoladeRecord["id"]) {
+  if (id === "biggest-blowout") {
+    return <Flame className="text-[#a94124]" size={15} aria-hidden="true" />;
+  }
+
+  if (id === "playoff-run") {
+    return <Shield className="text-[#426b39]" size={15} aria-hidden="true" />;
+  }
+
+  return <Medal className="text-[#b8872f]" size={15} aria-hidden="true" />;
+}
+
+function teamAccoladeClass(accent: AccoladeRecord["accent"]) {
+  if (accent === "red") {
+    return "border-[#efc3b4] bg-[#fff2ec]";
+  }
+
+  if (accent === "gold") {
+    return "border-[#e2c16d] bg-[#fff8df]";
+  }
+
+  if (accent === "green") {
+    return "border-[#c9dabc] bg-[#f1f7ec]";
+  }
+
+  return "border-[#d9c0a2] bg-[#fff5eb]";
 }
 
 function normalizeTeamRow(row: EspnTeamRow): NormalizedEspnTeam {

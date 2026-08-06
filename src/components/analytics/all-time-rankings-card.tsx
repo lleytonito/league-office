@@ -1,10 +1,12 @@
 "use client";
 
 import { Trophy } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 export type AllTimeRankingRow = {
   championships: number;
+  espnMemberId: string | null;
   latestTeamName: string;
   managerLabel: string;
   placementPoints: number;
@@ -21,11 +23,13 @@ const powerFormula = {
 
 export function AllTimeRankingsCard({
   completedSeasons,
+  currentEspnMemberId,
   hasWarnings,
   lastRefreshedAt,
   rankings,
 }: {
   completedSeasons: number[];
+  currentEspnMemberId?: string | null;
   hasWarnings: boolean;
   lastRefreshedAt: string | null;
   rankings: AllTimeRankingRow[];
@@ -63,7 +67,12 @@ export function AllTimeRankingsCard({
           >
             <div className="grid gap-2">
               {rankings.map((row, index) => (
-                <RankingRow index={index} key={`${row.latestTeamName}-${index}`} row={row} />
+                <RankingRow
+                  currentEspnMemberId={currentEspnMemberId}
+                  index={index}
+                  key={`${row.espnMemberId ?? row.latestTeamName}-${index}`}
+                  row={row}
+                />
               ))}
             </div>
           </div>
@@ -135,9 +144,24 @@ function FormulaDetails() {
   );
 }
 
-function RankingRow({ index, row }: { index: number; row: AllTimeRankingRow }) {
-  return (
-    <article className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[8px] border border-[#e1e5d9] bg-[#fbfcf8] p-3">
+function RankingRow({
+  currentEspnMemberId,
+  index,
+  row,
+}: {
+  currentEspnMemberId?: string | null;
+  index: number;
+  row: AllTimeRankingRow;
+}) {
+  const isCurrentTeam = row.espnMemberId && row.espnMemberId === currentEspnMemberId;
+  const content = (
+    <article
+      className={`grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[8px] border p-3 transition ${
+        isCurrentTeam
+          ? "border-[#b8872f] bg-[#fff9ea] shadow-[0_0_0_1px_rgba(184,135,47,0.18)]"
+          : "border-[#e1e5d9] bg-[#fbfcf8] hover:border-[#c8d1be]"
+      }`}
+    >
       <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#183a2b] text-sm font-semibold text-white">
         {index + 1}
       </span>
@@ -157,4 +181,10 @@ function RankingRow({ index, row }: { index: number; row: AllTimeRankingRow }) {
       </div>
     </article>
   );
+
+  return row.espnMemberId ? (
+    <Link href={`/teams/${encodeURIComponent(row.espnMemberId)}?from=analytics`}>
+      {content}
+    </Link>
+  ) : content;
 }

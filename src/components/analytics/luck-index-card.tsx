@@ -1,6 +1,7 @@
 "use client";
 
 import { Clover, TrendingDown, TrendingUp } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 export type LuckIndexRow = {
@@ -15,10 +16,12 @@ export type LuckIndexRow = {
 };
 
 export function LuckIndexCard({
+  currentEspnMemberId,
   hasWarnings,
   lastRefreshedAt,
   rows,
 }: {
+  currentEspnMemberId?: string | null;
   hasWarnings: boolean;
   lastRefreshedAt: string | null;
   rows: LuckIndexRow[];
@@ -59,7 +62,12 @@ export function LuckIndexCard({
           >
             <div className="grid gap-2">
               {rows.map((row, index) => (
-                <LuckRow index={index} key={row.espnMemberId} row={row} />
+                <LuckRow
+                  currentEspnMemberId={currentEspnMemberId}
+                  index={index}
+                  key={row.espnMemberId}
+                  row={row}
+                />
               ))}
             </div>
           </div>
@@ -122,11 +130,27 @@ function FormulaDetails() {
   );
 }
 
-function LuckRow({ index, row }: { index: number; row: LuckIndexRow }) {
+function LuckRow({
+  currentEspnMemberId,
+  index,
+  row,
+}: {
+  currentEspnMemberId?: string | null;
+  index: number;
+  row: LuckIndexRow;
+}) {
   const tone = luckTone(row.luckScore);
+  const isCurrentTeam = row.espnMemberId === currentEspnMemberId;
 
   return (
-    <article className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[8px] border border-[#e1e5d9] bg-[#fbfcf8] p-3">
+    <Link href={`/teams/${encodeURIComponent(row.espnMemberId)}?from=analytics`}>
+      <article
+        className={`grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[8px] border p-3 transition ${
+          isCurrentTeam
+            ? "border-[#b8872f] bg-[#fff9ea] shadow-[0_0_0_1px_rgba(184,135,47,0.18)]"
+            : "border-[#e1e5d9] bg-[#fbfcf8] hover:border-[#c8d1be]"
+        }`}
+      >
       <span className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${tone.badge}`}>
         {index + 1}
       </span>
@@ -145,6 +169,7 @@ function LuckRow({ index, row }: { index: number; row: LuckIndexRow }) {
         <p className="text-xs font-semibold text-[#6a725f]">{tone.label}</p>
       </div>
     </article>
+    </Link>
   );
 }
 

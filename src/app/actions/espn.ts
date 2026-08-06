@@ -2,9 +2,12 @@
 
 import {
   buildAllTimeRanking,
+  buildAccoladeRecords,
+  buildAveragePointsRanking,
   buildLuckIndex,
   detectChampionships,
   type EspnIdentityAlias,
+  type NormalizedEspnMatchup,
   type NormalizedEspnTeam,
   normalizeMatchups,
   normalizeTeams,
@@ -69,6 +72,7 @@ export async function refreshEspnAnalyticsAction(
   const completed: number[] = [];
   const errors: string[] = [];
   const allNormalizedTeams: NormalizedEspnTeam[] = [];
+  const allNormalizedMatchups: NormalizedEspnMatchup[] = [];
   const normalizedTeams: NormalizedEspnTeam[] = [];
   let seasons: number[] = [];
   const aliases = await fetchIdentityAliases(supabase);
@@ -88,6 +92,7 @@ export async function refreshEspnAnalyticsAction(
       const seasonTeams = normalizeTeams(season, seasonData, aliases);
       const seasonMatchups = normalizeMatchups(season, seasonData);
       allNormalizedTeams.push(...seasonTeams);
+      allNormalizedMatchups.push(...seasonMatchups);
 
       await supabase.from("espn_league_snapshots").upsert(
         {
@@ -176,6 +181,8 @@ export async function refreshEspnAnalyticsAction(
 
   const allTimeRanking = buildAllTimeRanking(normalizedTeams);
   const luckIndex = buildLuckIndex(normalizedTeams, allNormalizedTeams);
+  const averagePoints = buildAveragePointsRanking(normalizedTeams, allNormalizedTeams);
+  const accoladeRecords = buildAccoladeRecords(allNormalizedTeams, allNormalizedMatchups);
   const championshipDetections = detectChampionships(normalizedTeams);
 
   const analyticsTimestamp = new Date().toISOString();
@@ -220,6 +227,37 @@ export async function refreshEspnAnalyticsAction(
         status: errors.length ? "stale" : "fresh",
         summary: "Points-for rank compared to final ESPN finish for current active teams.",
         title: "Luck Index",
+        updated_by_member_id: actor.id,
+      },
+      {
+        error_summary: errors.length ? errors.join("\n") : null,
+        last_refreshed_at: analyticsTimestamp,
+        metric_key: "average-points",
+        payload: {
+          formula: {
+            score: "average ESPN season points across completed scored seasons",
+          },
+          rankings: averagePoints,
+          seasonsCompleted: completedAnalyticsSeasons,
+          seasonsWithErrors: errors,
+        },
+        status: errors.length ? "stale" : "fresh",
+        summary: "Average ESPN season points for current active teams.",
+        title: "Average Points Scored",
+        updated_by_member_id: actor.id,
+      },
+      {
+        error_summary: errors.length ? errors.join("\n") : null,
+        last_refreshed_at: analyticsTimestamp,
+        metric_key: "accolades",
+        payload: {
+          records: accoladeRecords,
+          seasonsCompleted: completedAnalyticsSeasons,
+          seasonsWithErrors: errors,
+        },
+        status: errors.length ? "stale" : "fresh",
+        summary: "Current record-holder accolades for active teams.",
+        title: "Accolades",
         updated_by_member_id: actor.id,
       },
     ],

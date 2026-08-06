@@ -55,6 +55,30 @@ export type LuckIndexRow = {
   totalLuck: number;
 };
 
+export type AveragePointsRow = {
+  averagePoints: number;
+  espnMemberId: string;
+  latestTeamName: string;
+  managerLabel: string;
+  seasonsPlayed: number;
+  totalPoints: number;
+};
+
+export type AccoladeRecord = {
+  accent: "bronze" | "gold" | "green" | "red";
+  espnMemberId: string;
+  holderLabel: string;
+  id: "biggest-blowout" | "most-points-game" | "playoff-run";
+  matchupLabel: string;
+  opponentLabel: string | null;
+  scoreLine: string | null;
+  season: number;
+  teamName: string;
+  title: string;
+  value: number;
+  valueLabel: string;
+};
+
 export type ChampionshipDetection = {
   espnMemberId: string | null;
   espnTeamId: number;
@@ -325,6 +349,64 @@ export function buildLuckIndex(
     });
 }
 
+export function buildAveragePointsRanking(
+  completedTeamRows: NormalizedEspnTeam[],
+  allTeamRows = completedTeamRows,
+): AveragePointsRow[] {
+  const activeMemberIds = activeEspnMemberIds(allTeamRows);
+  const latestTeams = latestTeamByActiveMemberId(allTeamRows);
+  const rows = new Map<string, AveragePointsRow>();
+
+  for (const team of completedTeamRows) {
+    if (!team.espnMemberId || !activeMemberIds.has(team.espnMemberId) || team.points === null) {
+      continue;
+    }
+
+    const latestTeam = latestTeams.get(team.espnMemberId) ?? team;
+    const existing = rows.get(team.espnMemberId) ?? {
+      averagePoints: 0,
+      espnMemberId: team.espnMemberId,
+      latestTeamName: latestTeam.teamName,
+      managerLabel: latestTeam.ownerDisplayName ?? latestTeam.teamName,
+      seasonsPlayed: 0,
+      totalPoints: 0,
+    };
+
+    existing.latestTeamName = latestTeam.teamName;
+    existing.managerLabel = latestTeam.ownerDisplayName ?? latestTeam.teamName;
+    existing.seasonsPlayed += 1;
+    existing.totalPoints += team.points;
+    existing.averagePoints = roundOne(existing.totalPoints / existing.seasonsPlayed);
+    rows.set(team.espnMemberId, existing);
+  }
+
+  return [...rows.values()].sort((a, b) => {
+    if (b.averagePoints !== a.averagePoints) {
+      return b.averagePoints - a.averagePoints;
+    }
+
+    return a.managerLabel.localeCompare(b.managerLabel);
+  });
+}
+
+export function buildAccoladeRecords(
+  teams: NormalizedEspnTeam[],
+  matchups: NormalizedEspnMatchup[],
+): AccoladeRecord[] {
+  const activeMemberIds = activeEspnMemberIds(teams);
+  const teamLookup = new Map(teams.map((team) => [teamSeasonKey(team.season, team.espnTeamId), team]));
+  const scoredMatchups = matchups.filter(
+    (matchup) => matchup.homeScore !== null && matchup.awayScore !== null,
+  );
+  const records = [
+    biggestBlowoutRecord(scoredMatchups, teamLookup, activeMemberIds),
+    mostPointsGameRecord(scoredMatchups, teamLookup, activeMemberIds),
+    highestScoringPlayoffRunRecord(scoredMatchups, teamLookup, activeMemberIds),
+  ];
+
+  return records.filter((record): record is AccoladeRecord => Boolean(record));
+}
+
 export function buildTeamEraSummary({
   allTeams = [],
   matchups = [],
@@ -499,6 +581,32 @@ function maxNumber(values: number[]) {
   return values.length ? Math.max(...values) : null;
 }
 
+function activeEspnMemberIds(teams: NormalizedEspnTeam[]) {
+  const latestSeason = maxNumber(teams.map((team) => team.season));
+  if (!latestSeason) {
+    return new Set<string>();
+  }
+
+  return new Set(
+    teams
+      .filter((team) => team.season === latestSeason && team.espnMemberId)
+      .map((team) => team.espnMemberId as string),
+  );
+}
+
+function latestTeamByActiveMemberId(teams: NormalizedEspnTeam[]) {
+  const activeIds = activeEspnMemberIds(teams);
+  const latestTeams = new Map<string, NormalizedEspnTeam>();
+
+  for (const team of [...teams].sort((a, b) => b.season - a.season)) {
+    if (team.espnMemberId && activeIds.has(team.espnMemberId) && !latestTeams.has(team.espnMemberId)) {
+      latestTeams.set(team.espnMemberId, team);
+    }
+  }
+
+  return latestTeams;
+}
+
 function stabilizedPowerScore(totalPoints: number, seasonsPlayed: number) {
   const baselineAverage = 6.5;
   const priorSeasons = 2;
@@ -594,4 +702,162 @@ function buildFavoriteOpponent(
 
     return a.managerLabel.localeCompare(b.managerLabel);
   })[0] ?? null;
+}
+
+function biggestBlowoutRecord(
+  matchups: NormalizedEspnMatchup[],
+  teamLookup: Map<string, NormalizedEspnTeam>,
+  activeMemberIds: Set<string>,
+) {
+  let best: AccoladeRecord | null = null;
+
+  for (const matchup of matchups) {
+    if (matchup.homeScore === null || matchup.awayScore === null || !matchup.homeTeamId || !matchup.awayTeamId) {
+      continue;
+    }
+
+    const home = teamLookup.get(teamSeasonKey(matchup.season, matchup.homeTeamId));
+    const away = teamLookup.get(teamSeasonKey(matchup.season, matchup.awayTeamId));
+    if (!home || !away) {
+      continue;
+    }
+
+    const homeWon = matchup.homeScore >= matchup.awayScore;
+    const winner = homeWon ? home : away;
+    const loser = homeWon ? away : home;
+    const winnerScore = homeWon ? matchup.homeScore : matchup.awayScore;
+    const loserScore = homeWon ? matchup.awayScore : matchup.homeScore;
+    if (!winner.espnMemberId || !activeMemberIds.has(winner.espnMemberId)) {
+      continue;
+    }
+
+    const margin = roundOne(winnerScore - loserScore);
+    if (margin < 0 || (best && margin <= best.value)) {
+      continue;
+    }
+
+    best = {
+      accent: "red",
+      espnMemberId: winner.espnMemberId,
+      holderLabel: winner.ownerDisplayName ?? winner.teamName,
+      id: "biggest-blowout",
+      matchupLabel: matchupLabel(matchup),
+      opponentLabel: loser.ownerDisplayName ?? loser.teamName,
+      scoreLine: `${formatScore(winnerScore)}-${formatScore(loserScore)}`,
+      season: matchup.season,
+      teamName: winner.teamName,
+      title: "Biggest Blowout",
+      value: margin,
+      valueLabel: `${formatScore(margin)} pt margin`,
+    };
+  }
+
+  return best;
+}
+
+function mostPointsGameRecord(
+  matchups: NormalizedEspnMatchup[],
+  teamLookup: Map<string, NormalizedEspnTeam>,
+  activeMemberIds: Set<string>,
+) {
+  let best: AccoladeRecord | null = null;
+
+  for (const matchup of matchups) {
+    for (const side of ["home", "away"] as const) {
+      const teamId = side === "home" ? matchup.homeTeamId : matchup.awayTeamId;
+      const opponentId = side === "home" ? matchup.awayTeamId : matchup.homeTeamId;
+      const score = side === "home" ? matchup.homeScore : matchup.awayScore;
+      const opponentScore = side === "home" ? matchup.awayScore : matchup.homeScore;
+      if (!teamId || !opponentId || score === null || opponentScore === null) {
+        continue;
+      }
+
+      const team = teamLookup.get(teamSeasonKey(matchup.season, teamId));
+      const opponent = teamLookup.get(teamSeasonKey(matchup.season, opponentId));
+      if (!team?.espnMemberId || !activeMemberIds.has(team.espnMemberId)) {
+        continue;
+      }
+
+      if (best && score <= best.value) {
+        continue;
+      }
+
+      best = {
+        accent: "gold",
+        espnMemberId: team.espnMemberId,
+        holderLabel: team.ownerDisplayName ?? team.teamName,
+        id: "most-points-game",
+        matchupLabel: matchupLabel(matchup),
+        opponentLabel: opponent?.ownerDisplayName ?? opponent?.teamName ?? null,
+        scoreLine: `${formatScore(score)}-${formatScore(opponentScore)}`,
+        season: matchup.season,
+        teamName: team.teamName,
+        title: "Most Points In A Game",
+        value: score,
+        valueLabel: `${formatScore(score)} pts`,
+      };
+    }
+  }
+
+  return best;
+}
+
+function highestScoringPlayoffRunRecord(
+  matchups: NormalizedEspnMatchup[],
+  teamLookup: Map<string, NormalizedEspnTeam>,
+  activeMemberIds: Set<string>,
+) {
+  const runs = new Map<string, AccoladeRecord & { games: number }>();
+
+  for (const matchup of matchups.filter((item) => item.playoffTierType === "WINNERS_BRACKET")) {
+    for (const side of ["home", "away"] as const) {
+      const teamId = side === "home" ? matchup.homeTeamId : matchup.awayTeamId;
+      const score = side === "home" ? matchup.homeScore : matchup.awayScore;
+      if (!teamId || score === null) {
+        continue;
+      }
+
+      const team = teamLookup.get(teamSeasonKey(matchup.season, teamId));
+      if (!team?.espnMemberId || !activeMemberIds.has(team.espnMemberId)) {
+        continue;
+      }
+
+      const key = `${matchup.season}:${team.espnMemberId}`;
+      const existing = runs.get(key) ?? {
+        accent: "green",
+        espnMemberId: team.espnMemberId,
+        games: 0,
+        holderLabel: team.ownerDisplayName ?? team.teamName,
+        id: "playoff-run",
+        matchupLabel: `${matchup.season} playoffs`,
+        opponentLabel: null,
+        scoreLine: null,
+        season: matchup.season,
+        teamName: team.teamName,
+        title: "Highest Scoring Playoff Run",
+        value: 0,
+        valueLabel: "",
+      };
+
+      existing.games += 1;
+      existing.value = roundOne(existing.value + score);
+      existing.valueLabel = `${formatScore(existing.value)} pts`;
+      existing.scoreLine = `${existing.games} playoff game${existing.games === 1 ? "" : "s"}`;
+      runs.set(key, existing);
+    }
+  }
+
+  return [...runs.values()].sort((a, b) => b.value - a.value)[0] ?? null;
+}
+
+function matchupLabel(matchup: NormalizedEspnMatchup) {
+  if (matchup.playoffTierType && matchup.playoffTierType !== "NONE") {
+    return `${matchup.season} playoffs - Week ${matchup.matchupPeriodId}`;
+  }
+
+  return `${matchup.season} Week ${matchup.matchupPeriodId}`;
+}
+
+function formatScore(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
