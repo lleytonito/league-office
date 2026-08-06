@@ -255,9 +255,12 @@ function HistoricalRankingSlide({ slide }: { slide: HomeAnalyticsSlide }) {
             </p>
           ) : null}
         </div>
-        <div className="relative flex h-[104px] w-[118px] items-center justify-center">
-          <div className="absolute inset-y-2 inset-x-1 rounded-[26px] border border-[#b59657] bg-[#4a4538] shadow-[inset_0_0_0_1px_rgba(238,224,180,0.2)] [clip-path:polygon(18%_0%,82%_0%,100%_22%,92%_100%,8%_100%,0%_22%)]" />
-          <div className="absolute inset-y-4 inset-x-4 rounded-[20px] border border-[#766f5b] [clip-path:polygon(18%_0%,82%_0%,100%_22%,92%_100%,8%_100%,0%_22%)]" />
+        <div className="relative flex h-[104px] w-[122px] items-center justify-center">
+          <div className="absolute inset-y-2 inset-x-0 rounded-[28px] border border-[#b59657] bg-[#494236] shadow-[inset_0_0_0_1px_rgba(238,224,180,0.18)]" />
+          <div className="absolute left-3 top-1/2 h-9 w-px -translate-y-1/2 bg-[#b59657]/55" />
+          <div className="absolute right-3 top-1/2 h-9 w-px -translate-y-1/2 bg-[#b59657]/55" />
+          <div className="absolute inset-x-7 top-5 h-px bg-[#766f5b]" />
+          <div className="absolute inset-x-7 bottom-5 h-px bg-[#766f5b]" />
           <span className="relative text-5xl font-semibold leading-none text-white drop-shadow-sm">
             {slide.value}
           </span>
