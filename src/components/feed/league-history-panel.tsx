@@ -345,10 +345,9 @@ function TeamStatTile({
     "relative min-h-[64px] rounded-[8px] border border-[#8a6a4c] bg-[#5a4231] p-3 shadow-[inset_0_1px_0_rgba(242,232,211,0.08)] transition hover:bg-[#654b38]";
   const framedContents = (
     <>
-      <svg aria-hidden="true" className="pointer-events-none absolute inset-2 h-[calc(100%-1rem)] w-[calc(100%-1rem)]">
-        <path d="M1 1H92" stroke="#B59657" strokeOpacity="0.34" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-        <path d="M92 36V50" stroke="#B59657" strokeOpacity="0.28" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-      </svg>
+      <div className="pointer-events-none absolute inset-2 rounded-[5px] border border-[#b59657]/24" />
+      <div className="pointer-events-none absolute inset-x-4 top-2 h-px bg-[#b59657]/38" />
+      <div className="pointer-events-none absolute bottom-2 right-4 h-4 w-px bg-[#b59657]/32" />
       {contents}
     </>
   );
@@ -421,18 +420,18 @@ function BiggestBlowoutSlide({ slide }: { slide: HomeAnalyticsSlide }) {
         <div className="relative pb-3">
         <div className="grid grid-cols-2 items-stretch gap-0 overflow-hidden rounded-[8px] border border-[#c7924b] bg-[#3e201b] shadow-[inset_0_1px_0_rgba(245,232,215,0.08)]">
           <div className="min-w-0 border-r border-[#c7924b]/55 bg-[#8a4638] py-2.5 pl-3 pr-7">
-            <p className={`font-semibold leading-none text-[#f5e8d7] ${blowoutNameClass(holder)}`}>{holder}</p>
+            <p className={`flex min-h-8 items-end font-semibold leading-tight text-[#f5e8d7] ${blowoutNameClass(holder)}`}>{holder}</p>
             <p className="mt-1.5 text-[2rem] font-semibold leading-none text-[#f5e8d7]">{holderScore || "N/A"}</p>
           </div>
 
           <div className="min-w-0 bg-[#3e201b] py-2.5 pl-7 pr-3 text-right">
-            <p className={`font-semibold leading-none text-[#d8b9a7] ${blowoutNameClass(opponent)}`}>
+            <p className={`flex min-h-8 items-end justify-end font-semibold leading-tight text-[#d8b9a7] ${blowoutNameClass(opponent)}`}>
               {opponent}
             </p>
             <p className="mt-1.5 text-[2rem] font-semibold leading-none text-[#d8b9a7]">{opponentScore || "N/A"}</p>
           </div>
 
-          <div className="absolute left-1/2 top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[#c7924b] bg-[#4a251f] text-[10px] font-semibold text-[#c7924b] shadow-sm">
+          <div className="absolute left-1/2 top-[42%] flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[#c7924b] bg-[#4a251f] text-[10px] font-semibold text-[#c7924b] shadow-sm">
             VS
           </div>
         </div>
