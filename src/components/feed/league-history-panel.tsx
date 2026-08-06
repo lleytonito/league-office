@@ -407,6 +407,7 @@ function BiggestBlowoutSlide({ slide }: { slide: HomeAnalyticsSlide }) {
   const scoreLine = slide.stats?.find((stat) => stat.label === "Score")?.value ?? "";
   const [holderScore = "", opponentScore = ""] = scoreLine.split("-").map((score) => score.trim());
   const dateLabel = slide.stats?.find((stat) => stat.label === "Date")?.value ?? "";
+  const stackScoreboardNames = Math.max(holder.length, opponent.length) > 12;
 
   return (
     <Link
@@ -428,13 +429,15 @@ function BiggestBlowoutSlide({ slide }: { slide: HomeAnalyticsSlide }) {
         <div className="relative pb-3">
         <div className="grid grid-cols-2 items-stretch gap-0 overflow-hidden rounded-[8px] border border-[#c7924b] bg-[#3e201b] shadow-[inset_0_1px_0_rgba(245,232,215,0.08)]">
           <div className="min-w-0 border-r border-[#c7924b]/55 bg-[#8a4638] py-2.5 pl-3 pr-7">
-            <p className={`flex min-h-10 items-end font-semibold leading-tight text-[#f5e8d7] ${blowoutNameClass(holder)}`}>{holder}</p>
+            <p className={`flex min-h-10 items-end font-semibold leading-tight text-[#f5e8d7] ${blowoutNameClass(holder)}`}>
+              {formatScoreboardName(holder, stackScoreboardNames)}
+            </p>
             <p className="mt-1.5 text-[2rem] font-semibold leading-none text-[#f5e8d7]">{holderScore || "N/A"}</p>
           </div>
 
           <div className="min-w-0 bg-[#3e201b] py-2.5 pl-7 pr-3 text-right">
             <p className={`flex min-h-10 items-end justify-end font-semibold leading-tight text-[#d8b9a7] ${blowoutNameClass(opponent)}`}>
-              {opponent}
+              {formatScoreboardName(opponent, stackScoreboardNames)}
             </p>
             <p className="mt-1.5 text-[2rem] font-semibold leading-none text-[#d8b9a7]">{opponentScore || "N/A"}</p>
           </div>
@@ -469,6 +472,22 @@ function blowoutNameClass(value: string) {
   }
 
   return "text-base";
+}
+
+function formatScoreboardName(name: string, shouldStack: boolean) {
+  if (!shouldStack || !name.includes(" ")) {
+    return name;
+  }
+
+  const parts = name.split(" ");
+  const last = parts.pop();
+  return (
+    <>
+      {parts.join(" ")}
+      <br />
+      {last}
+    </>
+  );
 }
 
 function formatMarginLabel(label: string) {
