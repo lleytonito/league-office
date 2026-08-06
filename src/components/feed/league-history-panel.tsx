@@ -274,7 +274,11 @@ function HistoricalRankingSlide({ slide }: { slide: HomeAnalyticsSlide }) {
               strokeWidth="1"
             />
           </svg>
-          <span className="relative text-5xl font-semibold leading-none text-white drop-shadow-sm">
+          <span
+            className={`relative font-semibold leading-none text-white drop-shadow-sm ${
+              slide.value.length > 3 ? "text-[2.35rem]" : slide.value.length > 2 ? "text-[2.7rem]" : "text-5xl"
+            }`}
+          >
             {slide.value}
           </span>
         </div>
