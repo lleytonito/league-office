@@ -372,9 +372,10 @@ function buildHomeAnalyticsSlides({
   if (allTimeRank) {
     slides.push({
       href: "/analytics?metric=all-time-rankings#all-time-rankings-current-team",
-      label: "All-time power",
-      rankLabel: "PWR",
-      title: "Historical ranking",
+      kind: "historicalRanking",
+      label: "Historical ranking",
+      rankLabel: `${(allTimeRank.row as AllTimeRankingRow).powerScore} PWR`,
+      title: "All-Time Ranking",
       tone: "slate",
       value: `#${allTimeRank.index + 1}`,
     });
