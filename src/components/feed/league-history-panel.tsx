@@ -81,9 +81,13 @@ export function LeagueHistoryPanel({
         >
           {activeSlide ? (
             <article
-              className={`min-h-[164px] overflow-hidden rounded-[10px] border p-3 shadow-sm transition-all duration-300 ease-out motion-reduce:transition-none ${
+              className={`min-h-[164px] overflow-hidden rounded-[10px] border shadow-sm transition-all duration-300 ease-out motion-reduce:transition-none ${
                 direction >= 0 ? "animate-[slideInRight_220ms_ease-out]" : "animate-[slideInLeft_220ms_ease-out]"
-              } ${slideTone(activeSlide.tone)}`}
+              } ${
+                activeSlide.kind === "historicalRanking"
+                  ? "border-[#8c8266] bg-[#837b67] p-[2px]"
+                  : `${slideTone(activeSlide.tone)} p-3`
+              }`}
               key={`${activeSlide.title}-${index}`}
               style={dragX ? { transform: `translateX(${dragX}px)` } : undefined}
             >
@@ -231,13 +235,13 @@ function slideTone(tone: HomeAnalyticsSlide["tone"]) {
 function HistoricalRankingSlide({ slide }: { slide: HomeAnalyticsSlide }) {
   return (
     <Link
-      className="relative block min-h-[138px] rounded-[8px] text-[#1a2119] outline-none transition hover:scale-[1.005] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ead7a2]"
+      className="relative block min-h-[158px] rounded-[8px] text-[#1a2119] outline-none transition hover:scale-[1.003] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ead7a2]"
       href={slide.href}
     >
-      <div className="absolute inset-0 rounded-[8px] border border-[#6f7767] bg-[#eef0e7]" />
-      <div className="pointer-events-none absolute inset-x-4 top-3 h-px bg-[#b59657]/70" />
-      <div className="pointer-events-none absolute inset-x-4 bottom-3 h-px bg-[#b59657]/40" />
-      <div className="relative grid min-h-[138px] grid-cols-[1fr_auto] items-center gap-3 px-4 py-3">
+      <div className="absolute inset-0 rounded-[8px] border border-[#d1c49a] bg-[#eef0e7]" />
+      <div className="pointer-events-none absolute inset-x-4 top-4 h-px bg-[#b59657]/70" />
+      <div className="pointer-events-none absolute inset-x-4 bottom-4 h-px bg-[#b59657]/40" />
+      <div className="relative grid min-h-[158px] grid-cols-[1fr_auto] items-center gap-3 px-4 py-4">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#4f5b4f]">
             {slide.label}
@@ -246,14 +250,14 @@ function HistoricalRankingSlide({ slide }: { slide: HomeAnalyticsSlide }) {
             {slide.title}
           </h2>
           {slide.rankLabel ? (
-            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#566252]">
+            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#8b691f]">
               {slide.rankLabel}
             </p>
           ) : null}
         </div>
-        <div className="relative flex h-[98px] w-[112px] items-center justify-center">
-          <div className="absolute inset-y-1 inset-x-0 rounded-[30px] border border-[#b59657] bg-[#344333] shadow-[inset_0_0_0_2px_rgba(255,255,255,0.08)] [clip-path:polygon(14%_0%,86%_0%,100%_50%,86%_100%,14%_100%,0%_50%)]" />
-          <div className="absolute inset-y-4 inset-x-5 rounded-[22px] border border-[#55664f] [clip-path:polygon(14%_0%,86%_0%,100%_50%,86%_100%,14%_100%,0%_50%)]" />
+        <div className="relative flex h-[104px] w-[118px] items-center justify-center">
+          <div className="absolute inset-y-2 inset-x-1 rounded-[26px] border border-[#b59657] bg-[#4a4538] shadow-[inset_0_0_0_1px_rgba(238,224,180,0.2)] [clip-path:polygon(18%_0%,82%_0%,100%_22%,92%_100%,8%_100%,0%_22%)]" />
+          <div className="absolute inset-y-4 inset-x-4 rounded-[20px] border border-[#766f5b] [clip-path:polygon(18%_0%,82%_0%,100%_22%,92%_100%,8%_100%,0%_22%)]" />
           <span className="relative text-5xl font-semibold leading-none text-white drop-shadow-sm">
             {slide.value}
           </span>
