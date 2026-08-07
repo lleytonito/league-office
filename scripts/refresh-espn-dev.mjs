@@ -624,9 +624,10 @@ function highestScoringPlayoffRunRecord(matchups, teamLookup, activeMemberIds) {
 
       const key = `${matchup.season}:${team.espnMemberId}`;
       const existing = runs.get(key) ?? {
-        accent: "green",
+        accent: "violet",
         espnMemberId: team.espnMemberId,
         games: 0,
+        rawGameScores: [],
         holderLabel: team.ownerDisplayName ?? team.teamName,
         id: "playoff-run",
         matchupLabel: `${matchup.season} playoffs`,
@@ -634,7 +635,7 @@ function highestScoringPlayoffRunRecord(matchups, teamLookup, activeMemberIds) {
         scoreLine: null,
         season: matchup.season,
         teamName: team.teamName,
-        title: "Highest Scoring Playoff Run",
+        title: "Best Playoff Run",
         value: 0,
         valueLabel: "",
       };
@@ -643,11 +644,33 @@ function highestScoringPlayoffRunRecord(matchups, teamLookup, activeMemberIds) {
       existing.value = roundOne(existing.value + score);
       existing.valueLabel = `${formatScore(existing.value)} pts`;
       existing.scoreLine = `${existing.games} playoff game${existing.games === 1 ? "" : "s"}`;
+      existing.rawGameScores.push({ score, week: matchup.matchupPeriodId });
       runs.set(key, existing);
     }
   }
 
-  return [...runs.values()].sort((a, b) => b.value - a.value)[0] ?? null;
+  return [...runs.values()]
+    .map((run) => {
+      const { games, rawGameScores, ...record } = run;
+      void games;
+      const sortedScores = [...rawGameScores].sort((a, b) => a.week - b.week);
+      return {
+        ...record,
+        gameScores: playoffRoundLabels(sortedScores.length).map((label, index) => ({
+          label,
+          scoreLabel: formatScore(sortedScores[index]?.score ?? 0),
+          week: sortedScores[index]?.week ?? index + 1,
+        })),
+      };
+    })
+    .sort((a, b) => b.value - a.value)[0] ?? null;
+}
+
+function playoffRoundLabels(count) {
+  if (count === 3) return ["R1", "SF", "Final"];
+  if (count === 2) return ["SF", "Final"];
+  if (count === 1) return ["Final"];
+  return Array.from({ length: count }, (_, index) => (index === count - 1 ? "Final" : `G${index + 1}`));
 }
 
 function activeEspnMemberIds(teams) {

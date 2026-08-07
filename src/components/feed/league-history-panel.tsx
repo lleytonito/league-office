@@ -8,7 +8,7 @@ import { useRef, useState } from "react";
 export type HomeAnalyticsSlide = {
   cta?: string;
   href: string;
-  kind?: "biggestBlowout" | "historicalRanking" | "metric" | "mostPointsGame" | "team";
+  kind?: "biggestBlowout" | "historicalRanking" | "metric" | "mostPointsGame" | "playoffRun" | "team";
   label: string;
   logoUrl?: string | null;
   meta?: string;
@@ -92,6 +92,8 @@ export function LeagueHistoryPanel({
                       ? "border-[#a46a54] bg-[#7f4638] p-[2px]"
                       : activeSlide.kind === "mostPointsGame"
                         ? "border-[#456a7f] bg-[#1e313a] p-[2px]"
+                        : activeSlide.kind === "playoffRun"
+                          ? "border-[#59456f] bg-[#2b2236] p-[2px]"
                   : `${slideTone(activeSlide.tone)} p-3`
               }`}
               key={`${activeSlide.title}-${index}`}
@@ -105,6 +107,8 @@ export function LeagueHistoryPanel({
                 <BiggestBlowoutSlide slide={activeSlide} />
               ) : activeSlide.kind === "mostPointsGame" ? (
                 <MostPointsGameSlide slide={activeSlide} />
+              ) : activeSlide.kind === "playoffRun" ? (
+                <PlayoffRunSlide slide={activeSlide} />
               ) : (
                 <>
                   <div className="flex items-start gap-3">
@@ -561,6 +565,71 @@ function recordHolderClass(name: string) {
   }
 
   return "text-base";
+}
+
+function PlayoffRunSlide({ slide }: { slide: HomeAnalyticsSlide }) {
+  const holder = slide.stats?.find((stat) => stat.label === "Holder")?.value ?? "Record holder";
+  const year = slide.stats?.find((stat) => stat.label === "Date")?.value.match(/\d{4}/)?.[0] ?? slide.meta ?? "";
+  const total = slide.rankLabel?.replace(/\s*pts?$/i, "") ?? slide.value;
+  const roundScores =
+    slide.stats
+      ?.filter((stat) => stat.label.startsWith("Round:"))
+      .map((stat) => ({ label: stat.label.replace("Round:", ""), value: stat.value })) ?? [];
+
+  return (
+    <Link
+      className="relative block min-h-[158px] rounded-[8px] bg-[#eef0e7] text-[#17151c] outline-none transition hover:scale-[1.003] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bfa66a]"
+      href={slide.href}
+    >
+      <div className="absolute inset-0 rounded-[8px] border border-[#bfa66a]/70" />
+      <div className="pointer-events-none absolute inset-y-4 left-1/2 w-px bg-[#bfa66a]/45 max-sm:hidden" />
+      <div className="pointer-events-none absolute inset-x-4 top-3 h-px bg-[#bfa66a]/65" />
+      <div className="pointer-events-none absolute inset-x-4 bottom-3 h-px bg-[#bfa66a]/35" />
+
+      <div className="relative grid min-h-[158px] gap-2 px-4 py-3.5">
+        <div className="grid grid-cols-[1fr_auto] items-start gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b691f]">{slide.label}</p>
+            <h2 className="mt-1 text-[1.25rem] font-semibold leading-none text-[#17151c]">{slide.title}</h2>
+          </div>
+          {year ? <p className="pt-1 text-xs font-semibold text-[#8b691f]">{year}</p> : null}
+        </div>
+
+        <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-center gap-3">
+          <div className="min-w-0">
+            <p className="text-[3.35rem] font-semibold leading-[0.86] text-[#59456f] drop-shadow-[0_1px_0_rgba(255,255,255,0.45)]">
+              {total}
+            </p>
+            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#b0863f]">
+              Total points
+            </p>
+            <p className={`mt-2 font-semibold leading-tight text-[#b0863f] ${recordHolderClass(holder)}`}>{holder}</p>
+          </div>
+
+          <div className="relative min-w-0 py-1">
+            <div className="pointer-events-none absolute left-4 right-4 top-[1.55rem] h-px bg-[#bfa66a]/70" />
+            <div className="relative grid grid-cols-3 gap-1.5">
+              {(roundScores.length ? roundScores : fallbackPlayoffRounds(slide)).map((round) => (
+                <div className="min-w-0 text-center" key={round.label}>
+                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-[#bfa66a] bg-[#2b2236] text-[11px] font-semibold text-[#d9c16d] shadow-sm">
+                    {round.label}
+                  </div>
+                  <p className="mt-1 text-sm font-semibold leading-none text-[#17151c]">{round.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function fallbackPlayoffRounds(slide: HomeAnalyticsSlide) {
+  const scoreLine = slide.stats?.find((stat) => stat.label === "Score")?.value ?? "";
+  return [
+    { label: "Run", value: scoreLine.replace(" playoff games", " games") || "N/A" },
+  ];
 }
 
 function StatTile({

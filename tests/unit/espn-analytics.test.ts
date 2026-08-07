@@ -227,7 +227,9 @@ describe("ESPN analytics", () => {
       value: 140,
     });
     expect(records.find((record) => record.id === "playoff-run")).toMatchObject({
+      gameScores: [{ label: "Final", scoreLabel: "130", week: 1 }],
       espnMemberId: "active-b",
+      title: "Best Playoff Run",
       value: 130,
     });
   });

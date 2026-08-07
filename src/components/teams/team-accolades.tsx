@@ -105,7 +105,7 @@ function teamAccoladeIcon(id: AccoladeRecord["id"]) {
   }
 
   if (id === "playoff-run") {
-    return <Shield className="text-[#426b39]" size={15} aria-hidden="true" />;
+    return <Shield className="text-[#59456f]" size={15} aria-hidden="true" />;
   }
 
   return <Medal className="text-[#2f6f8f]" size={15} aria-hidden="true" />;
@@ -146,6 +146,10 @@ function teamAccoladeClass(accent: AccoladeRecord["accent"]) {
 
   if (accent === "green") {
     return "border-[#c9dabc] bg-[#f1f7ec]";
+  }
+
+  if (accent === "violet") {
+    return "border-[#d0c2dc] bg-[#f5f0f8]";
   }
 
   return "border-[#d9c0a2] bg-[#fff5eb]";

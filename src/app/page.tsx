@@ -398,6 +398,8 @@ function buildHomeAnalyticsSlides({
           ? "biggestBlowout"
           : record.id === "most-points-game"
             ? "mostPointsGame"
+            : record.id === "playoff-run"
+              ? "playoffRun"
             : undefined,
       label: "Accolade",
       rankLabel: record.valueLabel,
@@ -407,13 +409,17 @@ function buildHomeAnalyticsSlides({
         {
           label: "Holder",
           value:
-            record.id === "biggest-blowout" || record.id === "most-points-game"
+            record.id === "biggest-blowout" || record.id === "most-points-game" || record.id === "playoff-run"
               ? record.holderLabel
               : (record.holderLabel.split(" ")[0] ?? record.holderLabel),
         },
         { label: "Opponent", value: record.opponentLabel ?? "Opponent" },
         { label: "Score", value: record.scoreLine ?? record.valueLabel },
         { label: "Date", value: record.matchupLabel },
+        ...(record.gameScores?.map((score) => ({
+          label: `Round:${score.label}`,
+          value: score.scoreLabel,
+        })) ?? []),
       ],
       tone: record.id === "biggest-blowout" ? "red" : record.id === "most-points-game" ? "blue" : "slate",
       value: "Record",

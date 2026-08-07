@@ -65,8 +65,13 @@ export type AveragePointsRow = {
 };
 
 export type AccoladeRecord = {
-  accent: "blue" | "bronze" | "gold" | "green" | "red";
+  accent: "blue" | "bronze" | "gold" | "green" | "red" | "violet";
   espnMemberId: string;
+  gameScores?: Array<{
+    label: string;
+    scoreLabel: string;
+    week: number;
+  }>;
   holderLabel: string;
   id: "biggest-blowout" | "most-points-game" | "playoff-run";
   matchupLabel: string;
@@ -809,7 +814,7 @@ function highestScoringPlayoffRunRecord(
   teamLookup: Map<string, NormalizedEspnTeam>,
   activeMemberIds: Set<string>,
 ) {
-  const runs = new Map<string, AccoladeRecord & { games: number }>();
+  const runs = new Map<string, AccoladeRecord & { games: number; rawGameScores: Array<{ score: number; week: number }> }>();
 
   for (const matchup of matchups.filter((item) => item.playoffTierType === "WINNERS_BRACKET")) {
     for (const side of ["home", "away"] as const) {
@@ -826,9 +831,10 @@ function highestScoringPlayoffRunRecord(
 
       const key = `${matchup.season}:${team.espnMemberId}`;
       const existing = runs.get(key) ?? {
-        accent: "green",
+        accent: "violet",
         espnMemberId: team.espnMemberId,
         games: 0,
+        rawGameScores: [],
         holderLabel: team.ownerDisplayName ?? team.teamName,
         id: "playoff-run",
         matchupLabel: `${matchup.season} playoffs`,
@@ -836,7 +842,7 @@ function highestScoringPlayoffRunRecord(
         scoreLine: null,
         season: matchup.season,
         teamName: team.teamName,
-        title: "Highest Scoring Playoff Run",
+        title: "Best Playoff Run",
         value: 0,
         valueLabel: "",
       };
@@ -845,11 +851,44 @@ function highestScoringPlayoffRunRecord(
       existing.value = roundOne(existing.value + score);
       existing.valueLabel = `${formatScore(existing.value)} pts`;
       existing.scoreLine = `${existing.games} playoff game${existing.games === 1 ? "" : "s"}`;
+      existing.rawGameScores.push({ score, week: matchup.matchupPeriodId });
       runs.set(key, existing);
     }
   }
 
-  return [...runs.values()].sort((a, b) => b.value - a.value)[0] ?? null;
+  return (
+    [...runs.values()]
+      .map(({ rawGameScores, ...run }) => {
+        const { games, ...record } = run;
+        void games;
+        const sortedScores = [...rawGameScores].sort((a, b) => a.week - b.week);
+        return {
+          ...record,
+          gameScores: playoffRoundLabels(sortedScores.length).map((label, index) => ({
+            label,
+            scoreLabel: formatScore(sortedScores[index]?.score ?? 0),
+            week: sortedScores[index]?.week ?? index + 1,
+          })),
+        };
+      })
+      .sort((a, b) => b.value - a.value)[0] ?? null
+  );
+}
+
+function playoffRoundLabels(count: number) {
+  if (count === 3) {
+    return ["R1", "SF", "Final"];
+  }
+
+  if (count === 2) {
+    return ["SF", "Final"];
+  }
+
+  if (count === 1) {
+    return ["Final"];
+  }
+
+  return Array.from({ length: count }, (_, index) => (index === count - 1 ? "Final" : `G${index + 1}`));
 }
 
 function matchupLabel(matchup: NormalizedEspnMatchup) {
