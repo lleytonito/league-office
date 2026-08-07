@@ -433,7 +433,7 @@ function BiggestBlowoutSlide({ slide }: { slide: HomeAnalyticsSlide }) {
         <div className="relative pb-3">
         <div className="grid grid-cols-2 items-stretch gap-0 overflow-hidden rounded-[8px] border border-[#c7924b] bg-[#3e201b] shadow-[inset_0_1px_0_rgba(245,232,215,0.08)]">
           <div className="min-w-0 border-r border-[#c7924b]/55 bg-[#8a4638] py-2.5 pl-3 pr-7">
-            <p className={`flex min-h-10 items-end font-semibold leading-tight text-[#f5e8d7] ${blowoutNameClass(holder)}`}>
+            <p className={`flex min-h-10 items-end font-semibold leading-tight text-[#f3c56d] ${blowoutNameClass(holder)}`}>
               {formatScoreboardName(holder, stackScoreboardNames)}
             </p>
             <p className="mt-1.5 text-[2rem] font-semibold leading-none text-[#f5e8d7]">{holderScore || "N/A"}</p>
@@ -531,14 +531,14 @@ function MostPointsGameSlide({ slide }: { slide: HomeAnalyticsSlide }) {
             <p className="text-[4.2rem] font-semibold leading-[0.82] text-[#1e313a] drop-shadow-[0_1px_0_rgba(255,255,255,0.45)]">
               {points}
             </p>
-            <p className="-mt-0.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#b0863f]">Points</p>
+            <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#b0863f]">Points</p>
           </div>
         </div>
 
         <div className="grid grid-cols-[1fr_auto] items-end gap-3">
-          <div className="min-w-0 rounded-[7px] border border-[#456a7f]/35 bg-white/45 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
+          <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#456a7f]">Record holder</p>
-            <p className={`mt-0.5 font-semibold leading-tight text-[#14232b] ${recordHolderClass(holder)}`}>{holder}</p>
+            <p className={`mt-0.5 font-semibold leading-tight text-[#b0863f] ${recordHolderClass(holder)}`}>{holder}</p>
           </div>
           <div className="min-w-[6.7rem] text-right">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#456a7f]">Game</p>
