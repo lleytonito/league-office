@@ -515,7 +515,7 @@ function MostPointsGameSlide({ slide }: { slide: HomeAnalyticsSlide }) {
       <div className="pointer-events-none absolute inset-x-4 top-3 h-px bg-[#bfa66a]/70" />
       <div className="pointer-events-none absolute inset-x-4 bottom-3 h-px bg-[#bfa66a]/45" />
 
-      <div className="relative grid min-h-[158px] content-between gap-2 px-4 py-3.5">
+      <div className="relative grid min-h-[158px] grid-rows-[auto_auto_auto] gap-1 px-4 py-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#456a7f]">{slide.label}</p>
