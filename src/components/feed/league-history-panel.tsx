@@ -1,9 +1,9 @@
 "use client";
 
-import { BarChart3, ChevronLeft, ChevronRight, UsersRound } from "lucide-react";
+import { ArrowRight, BarChart3, ChevronLeft, ChevronRight, Trophy, UsersRound } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 
 export type HomeAnalyticsSlide = {
   cta?: string;
@@ -589,10 +589,10 @@ function PlayoffRunSlide({ slide }: { slide: HomeAnalyticsSlide }) {
       <div className="relative grid min-h-[158px] gap-2 px-4 py-3.5">
         <div className="grid grid-cols-[1fr_auto] items-start gap-3">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b691f]">{slide.label}</p>
-            <h2 className="mt-1 text-[1.25rem] font-semibold leading-none text-[#17151c]">{slide.title}</h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#59456f]">{slide.label}</p>
+            <h2 className="mt-1 text-[1.25rem] font-semibold leading-none text-[#59456f]">{slide.title}</h2>
           </div>
-          {year ? <p className="pt-1 text-xs font-semibold text-[#8b691f]">{year}</p> : null}
+          {year ? <p className="pt-1 text-xs font-semibold text-[#59456f]">{year}</p> : null}
         </div>
 
         <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-center gap-3">
@@ -600,22 +600,42 @@ function PlayoffRunSlide({ slide }: { slide: HomeAnalyticsSlide }) {
             <p className="text-[3.35rem] font-semibold leading-[0.86] text-[#59456f] drop-shadow-[0_1px_0_rgba(255,255,255,0.45)]">
               {total}
             </p>
-            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#b0863f]">
+            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#59456f]">
               Total points
             </p>
-            <p className={`mt-2 font-semibold leading-tight text-[#b0863f] ${recordHolderClass(holder)}`}>{holder}</p>
+            <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#59456f]">
+              Record holder
+            </p>
+            <p className={`mt-0.5 font-semibold leading-tight text-[#b0863f] ${recordHolderClass(holder)}`}>{holder}</p>
           </div>
 
           <div className="relative min-w-0 py-1">
-            <div className="pointer-events-none absolute left-4 right-4 top-[1.55rem] h-px bg-[#bfa66a]/70" />
-            <div className="relative grid grid-cols-3 gap-1.5">
-              {(roundScores.length ? roundScores : fallbackPlayoffRounds(slide)).map((round) => (
+            <div className="relative grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-1">
+              {(roundScores.length ? roundScores : fallbackPlayoffRounds(slide)).map((round, roundIndex, rounds) => (
+                <Fragment key={round.label}>
                 <div className="min-w-0 text-center" key={round.label}>
-                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-[#bfa66a] bg-[#2b2236] text-[11px] font-semibold text-[#d9c16d] shadow-sm">
-                    {round.label}
+                  <div className="mb-1 flex h-4 items-center justify-center text-[10px] font-semibold uppercase tracking-[0.1em] text-[#59456f]">
+                    {roundIndex === rounds.length - 1 ? <Trophy size={13} strokeWidth={2.2} aria-label="Final" /> : roundLabel(round.label)}
                   </div>
-                  <p className="mt-1 text-sm font-semibold leading-none text-[#17151c]">{round.value}</p>
+                  <div
+                    className={`mx-auto flex items-center justify-center border border-[#bfa66a] bg-[#2b2236] font-semibold text-[#d9c16d] shadow-sm ${
+                      roundIndex === rounds.length - 1
+                        ? "h-11 w-12 rounded-[12px] border-2 text-sm"
+                        : "h-10 w-10 rounded-full text-sm"
+                    }`}
+                  >
+                    {round.value}
+                  </div>
                 </div>
+                {roundIndex < rounds.length - 1 ? (
+                  <ArrowRight
+                    className="mt-5 text-[#bfa66a]"
+                    size={13}
+                    strokeWidth={2.4}
+                    aria-hidden="true"
+                  />
+                ) : null}
+                </Fragment>
               ))}
             </div>
           </div>
@@ -630,6 +650,10 @@ function fallbackPlayoffRounds(slide: HomeAnalyticsSlide) {
   return [
     { label: "Run", value: scoreLine.replace(" playoff games", " games") || "N/A" },
   ];
+}
+
+function roundLabel(label: string) {
+  return label === "R1" ? "QF" : label;
 }
 
 function StatTile({
