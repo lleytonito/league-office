@@ -1,5 +1,5 @@
 import type { AccoladeRecord } from "@/components/analytics/accolades-card";
-import { Award, Flame, Medal, Shield, Sparkles, Trophy } from "lucide-react";
+import { Award, Flame, Medal, Route, Shield, Sparkles, Trophy } from "lucide-react";
 
 export type ChampionshipAccolade = {
   season: number;
@@ -105,7 +105,7 @@ function teamAccoladeIcon(id: AccoladeRecord["id"]) {
   }
 
   if (id === "playoff-run") {
-    return <Shield className="text-[#59456f]" size={15} aria-hidden="true" />;
+    return <Route className="text-[#59456f]" size={15} aria-hidden="true" />;
   }
 
   return <Medal className="text-[#2f6f8f]" size={15} aria-hidden="true" />;
