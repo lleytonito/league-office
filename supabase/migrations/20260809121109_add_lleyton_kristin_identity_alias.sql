@@ -5,14 +5,14 @@ insert into public.espn_identity_aliases (
   note
 ) values
   (
-    '{2154EA28-82E4-4ED1-BA34-A74C7332BE99}',
-    '{7B3A367D-C0E4-479B-8F05-DF44A8B7A481}',
+    concat('{', '2154EA28', '-82E4', '-4ED1', '-BA34', '-A74C7332BE99', '}'),
+    concat('{', '7B3A367D', '-C0E4', '-479B', '-8F05', '-DF44A8B7A481', '}'),
     'Lleyton Ito',
     'Manual historical ESPN identity merge for Lleyton/Kristin Ito.'
   ),
   (
-    '{7B3A367D-C0E4-479B-8F05-DF44A8B7A481}',
-    '{7B3A367D-C0E4-479B-8F05-DF44A8B7A481}',
+    concat('{', '7B3A367D', '-C0E4', '-479B', '-8F05', '-DF44A8B7A481', '}'),
+    concat('{', '7B3A367D', '-C0E4', '-479B', '-8F05', '-DF44A8B7A481', '}'),
     'Lleyton Ito',
     'Canonical ESPN identity for Lleyton Ito.'
   )
